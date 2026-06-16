@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Glimpse.Abstractions/Glimpse.Abstractions.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Glimpse.Core.Tests/Glimpse.Core.Tests.csproj" />
+  </Folder>
+</Solution>
