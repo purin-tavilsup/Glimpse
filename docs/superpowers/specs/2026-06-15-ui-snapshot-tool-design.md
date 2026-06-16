@@ -286,15 +286,23 @@ scene (IScene) --> preview console --> engine (settle loop, disable anim, cultur
 
 ## 9. Open Questions / Decisions
 
-1. **Tool name** — working name `snapshot` / repo `ui-snapshot-tool`. Final name?
-2. **Output location** — per-repo `.claude/tmp/ui-snapshots/` vs central
-   `~/.claude/ui-snapshots/` for ad-hoc. (Lean: per-repo in a repo, central otherwise.)
+1. **Tool name** — **DECIDED: `Glimpse`** (2026-06-16). Namespace/assembly map:
+   - `Glimpse.Abstractions` (framework-free) + `Glimpse.Avalonia.Abstractions` (`IScene`).
+   - `Glimpse.Avalonia` (rendering engine) — replaces `Snapshots.Avalonia` throughout.
+   - `Glimpse.Core` (conventions: output dir, naming, manifest, OS capture).
+   - Repo stays `ui-snapshot-tool`; consuming consoles keep their own names
+     (e.g. `Mimica.Recorder.UI.Previews`).
+   - *Note:* §1–§8 still say `Snapshots.*` — read those as `Glimpse.*`; the
+     implementation plan uses the final names.
+2. **Output location** — **DECIDED (2026-06-16): per-repo when inside a repo, central
+   otherwise.** `.claude/tmp/ui-snapshots/` when a repo root is detected; fall back to
+   `~/.claude/ui-snapshots/` for repo-less ad-hoc design.
 3. **Target framework** — **DECIDED: net10.0** (must match Recorder; can't load a net10
    assembly into an older-runtime process).
 4. **Avalonia version pinning** — **DECIDED: engine + all consumers pin the same Avalonia
    11.3.x**, enforced by a startup check.
 5. **Abstractions distribution** — with the per-app-console model, consoles can use
-   project references within their own repo; a published `Snapshots.Avalonia` package
+   project references within their own repo; a published `Glimpse.Avalonia` package
    (local folder feed vs internal feed) is only needed for cross-repo reuse. Defer.
 
 ## 10. Build Order (when we implement — not today)
