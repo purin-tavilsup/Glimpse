@@ -1,0 +1,11 @@
+/Users/purin/dev/ui-snapshot-tool/src/Glimpse.Abstractions/bin/Debug/net10.0/Glimpse.Abstractions.deps.json
+/Users/purin/dev/ui-snapshot-tool/src/Glimpse.Abstractions/bin/Debug/net10.0/Glimpse.Abstractions.dll
+/Users/purin/dev/ui-snapshot-tool/src/Glimpse.Abstractions/bin/Debug/net10.0/Glimpse.Abstractions.pdb
+/Users/purin/dev/ui-snapshot-tool/src/Glimpse.Abstractions/obj/Debug/net10.0/Glimpse.Abstractions.GeneratedMSBuildEditorConfig.editorconfig
+/Users/purin/dev/ui-snapshot-tool/src/Glimpse.Abstractions/obj/Debug/net10.0/Glimpse.Abstractions.AssemblyInfoInputs.cache
+/Users/purin/dev/ui-snapshot-tool/src/Glimpse.Abstractions/obj/Debug/net10.0/Glimpse.Abstractions.AssemblyInfo.cs
+/Users/purin/dev/ui-snapshot-tool/src/Glimpse.Abstractions/obj/Debug/net10.0/Glimpse.Abstractions.csproj.CoreCompileInputs.cache
+/Users/purin/dev/ui-snapshot-tool/src/Glimpse.Abstractions/obj/Debug/net10.0/Glimpse.Abstractions.dll
+/Users/purin/dev/ui-snapshot-tool/src/Glimpse.Abstractions/obj/Debug/net10.0/refint/Glimpse.Abstractions.dll
+/Users/purin/dev/ui-snapshot-tool/src/Glimpse.Abstractions/obj/Debug/net10.0/Glimpse.Abstractions.pdb
+/Users/purin/dev/ui-snapshot-tool/src/Glimpse.Abstractions/obj/Debug/net10.0/ref/Glimpse.Abstractions.dll
