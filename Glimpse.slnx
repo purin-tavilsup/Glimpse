@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Glimpse.Abstractions/Glimpse.Abstractions.csproj" />
+    <Project Path="src/Glimpse.Avalonia.Abstractions/Glimpse.Avalonia.Abstractions.csproj" />
+    <Project Path="src/Glimpse.Avalonia/Glimpse.Avalonia.csproj" />
+    <Project Path="src/Glimpse.Core/Glimpse.Core.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/Glimpse.ScratchConsole/Glimpse.ScratchConsole.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Glimpse.Avalonia.Tests/Glimpse.Avalonia.Tests.csproj" />
+    <Project Path="tests/Glimpse.Core.Tests/Glimpse.Core.Tests.csproj" />
+    <Project Path="tests/Glimpse.ScratchConsole.Tests/Glimpse.ScratchConsole.Tests.csproj" />
+  </Folder>
+</Solution>
