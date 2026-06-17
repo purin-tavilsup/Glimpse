@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Headless;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -58,7 +59,7 @@ public sealed class SnapshotSession : ISnapshotRenderer, IDisposable
 
     private static RenderResult RenderCore(Control control, RenderOptions options)
     {
-        using var _ = CultureScope.Invariant();
+        using var cultureScope = CultureScope.Invariant();
 
         var window = new Window
         {
@@ -92,6 +93,10 @@ public sealed class SnapshotSession : ISnapshotRenderer, IDisposable
                     warnings.Add($"settle-cap-hit:{iterations}");
                 if (options.Scaling != 1.0)
                     warnings.Add("scaling-ignored"); // headless 11.3.x has no DPI knob — see Task 6
+
+                warnings.AddRange(FrameAnalysis.Inspect(frame));
+                if (!FontManager.Current.TryGetGlyphTypeface(new Typeface("Inter"), out _))
+                    warnings.Add("font-inter-unresolved"); // tofu proxy: requested font did not resolve to a real typeface
 
                 return new RenderResult(stream.ToArray(), frame.PixelSize.Width, frame.PixelSize.Height, warnings);
             }
