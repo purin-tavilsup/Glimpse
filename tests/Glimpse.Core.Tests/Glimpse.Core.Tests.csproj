@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Glimpse.Abstractions\Glimpse.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Glimpse.Core\Glimpse.Core.csproj" />
   </ItemGroup>
 
 </Project>
