@@ -1390,6 +1390,9 @@ public static class ManifestMerge
 {
     public const int CurrentSchemaVersion = 1;
 
+    // Both Scenes AND Failures are upserted by the same (Scene, Theme) key, so the two
+    // collections never drift: a re-rendered (scene,theme) replaces its prior entry AND its
+    // prior failure row; untouched prior entries/failures are carried over.
     public static Manifest Merge(
         Manifest? existing,
         IReadOnlyList<SceneEntry> entries,
@@ -1398,16 +1401,24 @@ public static class ManifestMerge
         DateTimeOffset generatedAt)
     {
         var replacedKeys = entries.Select(e => (e.Scene, e.Theme)).ToHashSet();
-        var carried = existing?.Scenes.Where(e => !replacedKeys.Contains((e.Scene, e.Theme)))
-            ?? Enumerable.Empty<SceneEntry>();
 
-        var merged = carried
+        var carriedScenes = existing?.Scenes.Where(e => !replacedKeys.Contains((e.Scene, e.Theme)))
+            ?? Enumerable.Empty<SceneEntry>();
+        var mergedScenes = carriedScenes
             .Concat(entries)
             .OrderBy(e => e.Scene, StringComparer.Ordinal)
             .ThenBy(e => e.Theme, StringComparer.Ordinal)
             .ToList();
 
-        return new Manifest(CurrentSchemaVersion, runId, generatedAt, merged, failures);
+        var carriedFailures = existing?.Failures.Where(f => !replacedKeys.Contains((f.Scene, f.Theme)))
+            ?? Enumerable.Empty<Failure>();
+        var mergedFailures = carriedFailures
+            .Concat(failures)
+            .OrderBy(f => f.Scene, StringComparer.Ordinal)
+            .ThenBy(f => f.Theme, StringComparer.Ordinal)
+            .ToList();
+
+        return new Manifest(CurrentSchemaVersion, runId, generatedAt, mergedScenes, mergedFailures);
     }
 }
 ```
