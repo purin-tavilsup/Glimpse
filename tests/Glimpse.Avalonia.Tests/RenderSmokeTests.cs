@@ -11,9 +11,9 @@ public class RenderSmokeTests(SnapshotSessionFixture fixture)
     [Fact]
     public void Render_SimpleControl_ShouldProduceNonEmptyPngOfRequestedSize()
     {
-        var control = new Border { Background = Brushes.CornflowerBlue };
-
-        var result = fixture.Session.Render(control, new RenderOptions(Width: 320, Height: 240));
+        var result = fixture.Session.Render(
+            () => new Border { Background = Brushes.CornflowerBlue },
+            new RenderOptions(Width: 320, Height: 240));
 
         Assert.NotEmpty(result.Png);
         Assert.Equal(320, result.PixelWidth);
