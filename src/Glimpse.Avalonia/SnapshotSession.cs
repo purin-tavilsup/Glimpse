@@ -40,10 +40,12 @@ public sealed class SnapshotSession : ISnapshotRenderer, IDisposable
         }
     }
 
-    // Sync entry point for tests/simple callers; the async path is canonical. Safe here because
-    // the session runs its own dispatcher on a dedicated thread (no sync-over-async deadlock).
-    public RenderResult Render(Control control, RenderOptions options)
-        => _session.Dispatch(() => RenderCore(control, options), CancellationToken.None)
+    // Sync entry point for tests/simple callers; the async path is canonical. The control is built
+    // INSIDE the dispatch so it is constructed on the Avalonia UI thread — many controls (e.g. TextBlock)
+    // touch thread-affined services at construction and throw "Call from invalid thread" if built off-thread.
+    // Safe from deadlock because the session owns its own dispatcher on a dedicated thread.
+    public RenderResult Render(Func<Control> build, RenderOptions options)
+        => _session.Dispatch(() => RenderCore(build(), options), CancellationToken.None)
             .GetAwaiter().GetResult();
 
     public Task<RenderResult> RenderSceneAsync(IScene scene, RenderOptions options)
