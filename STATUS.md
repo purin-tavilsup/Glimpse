@@ -35,6 +35,18 @@ documented), format clean. **No git remote yet** — local only.
 - **Controls must be built on the UI thread** (TextBlock throws "Call from
   invalid thread" off-thread) → sync API is `Render(Func<Control>)`.
 
+## Active thread: live-screenshot skill (spec written, AWAITING POND REVIEW)
+
+Second delivery mode, brainstormed + spec'd 2026-06-16: a `glimpse` skill that
+screenshots a **live running desktop app** via macOS `screencapture` (any app, no
+Avalonia engine, sidesteps cross-repo distribution). Decisions: window-if-findable
+else whole-screen; **.NET CLI-backed** (extend `Glimpse.Core` with CoreGraphics
+window-id lookup + new `tools/Glimpse.Capture` console); **capture-only** (assumes app
+running — composes with `/run`); **no screenshot accumulation** (stable-name overwrite +
+per-run prune in a `screenshots/` subdir).
+- Spec: `docs/superpowers/specs/2026-06-16-glimpse-live-screenshot-skill-design.md` (committed `7e0f1fa`).
+- **NEXT:** Pond reviews the spec → `writing-plans` → implement (build order in spec §9).
+
 ## Deferred / next actions
 1. **Recorder preview console** (spec §4.5) — the first *real* app consumer.
    Separate repo (`~/dev/Recorder` under `Tools/`); blocked on the cross-repo
