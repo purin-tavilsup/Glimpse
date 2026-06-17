@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Glimpse.Abstractions\Glimpse.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>
