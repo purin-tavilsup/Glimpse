@@ -13,15 +13,23 @@ public static class ManifestMerge
         DateTimeOffset generatedAt)
     {
         var replacedKeys = entries.Select(e => (e.Scene, e.Theme)).ToHashSet();
-        var carried = existing?.Scenes.Where(e => !replacedKeys.Contains((e.Scene, e.Theme)))
-            ?? Enumerable.Empty<SceneEntry>();
 
-        var merged = carried
+        var carriedScenes = existing?.Scenes.Where(e => !replacedKeys.Contains((e.Scene, e.Theme)))
+            ?? Enumerable.Empty<SceneEntry>();
+        var mergedScenes = carriedScenes
             .Concat(entries)
             .OrderBy(e => e.Scene, StringComparer.Ordinal)
             .ThenBy(e => e.Theme, StringComparer.Ordinal)
             .ToList();
 
-        return new Manifest(CurrentSchemaVersion, runId, generatedAt, merged, failures);
+        var carriedFailures = existing?.Failures.Where(f => !replacedKeys.Contains((f.Scene, f.Theme)))
+            ?? Enumerable.Empty<Failure>();
+        var mergedFailures = carriedFailures
+            .Concat(failures)
+            .OrderBy(f => f.Scene, StringComparer.Ordinal)
+            .ThenBy(f => f.Theme, StringComparer.Ordinal)
+            .ToList();
+
+        return new Manifest(CurrentSchemaVersion, runId, generatedAt, mergedScenes, mergedFailures);
     }
 }

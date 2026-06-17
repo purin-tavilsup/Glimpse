@@ -17,6 +17,7 @@ public sealed class ScreenCapture
             ?? throw new GlimpseCaptureException("Failed to start 'screencapture' (macOS only).");
         await process.WaitForExitAsync();
 
+        // Safe to read after exit: screencapture emits minimal stderr (no pipe-buffer deadlock risk).
         if (process.ExitCode != 0 || !File.Exists(outputPath))
             throw new GlimpseCaptureException(
                 $"screencapture failed (exit {process.ExitCode}): {await process.StandardError.ReadToEndAsync()}");

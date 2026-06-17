@@ -22,7 +22,7 @@ public static class OutputLocator
     private static string? FindRepoRoot(string startDirectory)
     {
         for (var dir = new DirectoryInfo(startDirectory); dir is not null; dir = dir.Parent)
-            if (Directory.Exists(Path.Combine(dir.FullName, ".git")))
+            if (Path.Exists(Path.Combine(dir.FullName, ".git")))
                 return dir.FullName;
 
         return null;
