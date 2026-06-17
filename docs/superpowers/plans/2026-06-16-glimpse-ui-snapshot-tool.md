@@ -458,7 +458,7 @@ git commit -m "feat: add Glimpse.Avalonia env guard (version/TF fail-fast)"
 - Produces:
   - `record RenderOptions(int Width = 1024, int Height = 768, double Scaling = 1.0, ThemeVariant? Theme = null, IBrush? Background = null)`
   - `record RenderResult(byte[] Png, int PixelWidth, int PixelHeight, IReadOnlyList<string> Warnings)`
-  - `interface ISnapshotRenderer { RenderResult Render(Control, RenderOptions); Task<RenderResult> RenderSceneAsync(IScene, RenderOptions); }`
+  - `interface ISnapshotRenderer { RenderResult Render(Func<Control> build, RenderOptions); Task<RenderResult> RenderSceneAsync(IScene, RenderOptions); }` — **the sync `Render` takes a factory** so the control is constructed on the Avalonia UI thread (controls like `TextBlock` throw "Call from invalid thread" if built off-thread). Tests call `Render(() => new X{…}, opts)`.
   - `sealed class SnapshotSession : ISnapshotRenderer, IDisposable` — ctor runs `EnvironmentGuard.EnsureCompatible()` then starts one headless session.
   - `class GlimpseRenderException(string) : Exception`
 - Consumes: `EnvironmentGuard` (Task 3), `IScene` (Task 2).
@@ -499,9 +499,9 @@ public class RenderSmokeTests(SnapshotSessionFixture fixture)
     [Fact]
     public void Render_SimpleControl_ShouldProduceNonEmptyPngOfRequestedSize()
     {
-        var control = new Border { Background = Brushes.CornflowerBlue };
-
-        var result = fixture.Session.Render(control, new RenderOptions(Width: 320, Height: 240));
+        var result = fixture.Session.Render(
+            () => new Border { Background = Brushes.CornflowerBlue },
+            new RenderOptions(Width: 320, Height: 240));
 
         Assert.NotEmpty(result.Png);
         Assert.Equal(320, result.PixelWidth);
@@ -558,7 +558,8 @@ namespace Glimpse.Avalonia;
 
 public interface ISnapshotRenderer
 {
-    RenderResult Render(Control control, RenderOptions options);
+    // Factory (not a bare Control) so the control is built on the UI thread inside the dispatch.
+    RenderResult Render(Func<Control> build, RenderOptions options);
 
     Task<RenderResult> RenderSceneAsync(IScene scene, RenderOptions options);
 }
@@ -669,10 +670,12 @@ public sealed class SnapshotSession : ISnapshotRenderer, IDisposable
         _session = HeadlessUnitTestSession.StartNew(typeof(HeadlessSnapshotApp));
     }
 
-    // Sync entry point for tests/simple callers; the async path is canonical. Safe here because
-    // the session runs its own dispatcher on a dedicated thread (no sync-over-async deadlock).
-    public RenderResult Render(Control control, RenderOptions options)
-        => _session.Dispatch(() => RenderCore(control, options), CancellationToken.None)
+    // Sync entry point for tests/simple callers; the async path is canonical. The control is built
+    // INSIDE the dispatch so it is constructed on the Avalonia UI thread — many controls (e.g. TextBlock)
+    // touch thread-affined services at construction and throw "Call from invalid thread" if built off-thread.
+    // Safe from deadlock because the session owns its own dispatcher on a dedicated thread.
+    public RenderResult Render(Func<Control> build, RenderOptions options)
+        => _session.Dispatch(() => RenderCore(build(), options), CancellationToken.None)
             .GetAwaiter().GetResult();
 
     public Task<RenderResult> RenderSceneAsync(IScene scene, RenderOptions options)
@@ -801,8 +804,8 @@ public class ThemeDifferentialTests(SnapshotSessionFixture fixture)
         // A themed control: FluentTheme paints the window background per variant.
         Control NewControl() => new TextBlock { Text = "Glimpse" };
 
-        var light = fixture.Session.Render(NewControl(), new RenderOptions(Theme: ThemeVariant.Light));
-        var dark = fixture.Session.Render(NewControl(), new RenderOptions(Theme: ThemeVariant.Dark));
+        var light = fixture.Session.Render(NewControl, new RenderOptions(Theme: ThemeVariant.Light));
+        var dark = fixture.Session.Render(NewControl, new RenderOptions(Theme: ThemeVariant.Dark));
 
         Assert.NotEqual(Convert.ToHexString(light.Png), Convert.ToHexString(dark.Png));
     }
@@ -853,9 +856,9 @@ public class ScalingTests(SnapshotSessionFixture fixture)
     [Fact(Skip = "Avalonia 11.3.x headless exposes no per-window render scaling; scaling is descoped to 1.0 in v1.")]
     public void Render_WithScalingTwo_ShouldDoubleOutputPixels()
     {
-        var control = new Border { Background = Brushes.White };
-
-        var result = fixture.Session.Render(control, new RenderOptions(Width: 100, Height: 80, Scaling: 2.0));
+        var result = fixture.Session.Render(
+            () => new Border { Background = Brushes.White },
+            new RenderOptions(Width: 100, Height: 80, Scaling: 2.0));
 
         Assert.Equal(200, result.PixelWidth);
         Assert.Equal(160, result.PixelHeight);
@@ -864,9 +867,9 @@ public class ScalingTests(SnapshotSessionFixture fixture)
     [Fact]
     public void Render_WithNonUnitScaling_ShouldWarnScalingIgnored()
     {
-        var control = new Border { Background = Brushes.White };
-
-        var result = fixture.Session.Render(control, new RenderOptions(Width: 100, Height: 80, Scaling: 2.0));
+        var result = fixture.Session.Render(
+            () => new Border { Background = Brushes.White },
+            new RenderOptions(Width: 100, Height: 80, Scaling: 2.0));
 
         Assert.Contains("scaling-ignored", result.Warnings);
         Assert.Equal(100, result.PixelWidth); // honestly reports the 1x dimensions actually produced
@@ -921,7 +924,7 @@ public class DeterminismTests(SnapshotSessionFixture fixture)
         Control NewControl() => new TextBlock { Text = "deterministic", Foreground = Brushes.Black };
 
         var results = Enumerable.Range(0, 3)
-            .Select(_ => fixture.Session.Render(NewControl(), new RenderOptions(Width: 200, Height: 100)))
+            .Select(_ => fixture.Session.Render(NewControl, new RenderOptions(Width: 200, Height: 100)))
             .ToList();
 
         // Guard: determinism must not be satisfied by three identical *blank* frames.
@@ -935,9 +938,9 @@ public class DeterminismTests(SnapshotSessionFixture fixture)
     public void Render_PerpetuallyAnimatingControl_ShouldWarnSettleCapHit()
     {
         // An indeterminate ProgressBar animates forever, so no two consecutive frames match → cap hit.
-        var control = new ProgressBar { IsIndeterminate = true, Width = 160, Height = 8 };
-
-        var result = fixture.Session.Render(control, new RenderOptions(Width: 200, Height: 100));
+        var result = fixture.Session.Render(
+            () => new ProgressBar { IsIndeterminate = true, Width = 160, Height = 8 },
+            new RenderOptions(Width: 200, Height: 100));
 
         Assert.Contains(result.Warnings, w => w.StartsWith("settle-cap-hit"));
     }
@@ -991,9 +994,9 @@ public class FrameAnalysisTests(SnapshotSessionFixture fixture)
     [Fact]
     public void Render_SolidColorControl_ShouldWarnSingleColorFrame()
     {
-        var control = new Border { Background = Brushes.Red };
-
-        var result = fixture.Session.Render(control, new RenderOptions(Width: 64, Height: 64));
+        var result = fixture.Session.Render(
+            () => new Border { Background = Brushes.Red },
+            new RenderOptions(Width: 64, Height: 64));
 
         Assert.Contains(result.Warnings, w => w.StartsWith("single-color-frame"));
     }
@@ -1001,9 +1004,9 @@ public class FrameAnalysisTests(SnapshotSessionFixture fixture)
     [Fact]
     public void Render_ControlWithText_ShouldNotWarnSingleColorFrame()
     {
-        var control = new TextBlock { Text = "content", Foreground = Brushes.Black, FontSize = 32 };
-
-        var result = fixture.Session.Render(control, new RenderOptions(Width: 200, Height: 80));
+        var result = fixture.Session.Render(
+            () => new TextBlock { Text = "content", Foreground = Brushes.Black, FontSize = 32 },
+            new RenderOptions(Width: 200, Height: 80));
 
         Assert.DoesNotContain(result.Warnings, w => w.StartsWith("single-color-frame"));
     }
@@ -1012,9 +1015,9 @@ public class FrameAnalysisTests(SnapshotSessionFixture fixture)
     public void Render_NormalRender_ShouldNotWarnFontInterUnresolved()
     {
         // WithInterFont() registers Inter; the resolution check must NOT false-positive (see Task 8 caveat).
-        var control = new TextBlock { Text = "content", Foreground = Brushes.Black };
-
-        var result = fixture.Session.Render(control, new RenderOptions(Width: 200, Height: 80));
+        var result = fixture.Session.Render(
+            () => new TextBlock { Text = "content", Foreground = Brushes.Black },
+            new RenderOptions(Width: 200, Height: 80));
 
         Assert.DoesNotContain("font-inter-unresolved", result.Warnings);
     }
@@ -1700,7 +1703,7 @@ public class SnapshotRunnerTests
 
     private sealed class FakeRenderer(Func<IScene, RenderResult> render) : ISnapshotRenderer
     {
-        public RenderResult Render(Control control, RenderOptions options) => throw new NotSupportedException();
+        public RenderResult Render(Func<Control> build, RenderOptions options) => throw new NotSupportedException();
         public Task<RenderResult> RenderSceneAsync(IScene scene, RenderOptions options) => Task.FromResult(render(scene));
     }
 
