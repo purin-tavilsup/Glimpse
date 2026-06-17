@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Glimpse.Avalonia.Abstractions\Glimpse.Avalonia.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Glimpse.Avalonia\Glimpse.Avalonia.csproj" />
   </ItemGroup>
 
 </Project>
