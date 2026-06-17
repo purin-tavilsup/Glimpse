@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Glimpse.Abstractions/Glimpse.Abstractions.csproj" />
     <Project Path="src/Glimpse.Avalonia.Abstractions/Glimpse.Avalonia.Abstractions.csproj" />
+    <Project Path="src/Glimpse.Avalonia/Glimpse.Avalonia.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Glimpse.Avalonia.Tests/Glimpse.Avalonia.Tests.csproj" />
