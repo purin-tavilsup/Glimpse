@@ -9,6 +9,9 @@ public class ManifestMergeTests
         new(scene, theme, $"{scene}.{theme}.png", 100, 100, 1.0, status,
             DateTimeOffset.UnixEpoch, []);
 
+    private static Failure Fail(string scene, string theme) =>
+        new(scene, theme, "render error");
+
     [Fact]
     public void Merge_WithNoExisting_ShouldContainNewEntriesSorted()
     {
@@ -34,5 +37,31 @@ public class ManifestMergeTests
         Assert.Equal("run-2", result.RunId);
         Assert.Equal("failed", result.Scenes.Single(e => e.Scene == "Login" && e.Theme == "dark").Status);
         Assert.Contains(result.Scenes, e => e.Scene == "Home"); // carried over
+    }
+
+    [Fact]
+    public void Merge_WhenSceneRerunSucceeds_ShouldDropItsPriorFailure()
+    {
+        var existing = ManifestMerge.Merge(null,
+            [Entry("Login", "dark", "failed")], [Fail("Login", "dark")], "run-1", DateTimeOffset.UnixEpoch);
+
+        var result = ManifestMerge.Merge(existing,
+            [Entry("Login", "dark", "ok")], [], "run-2", DateTimeOffset.UnixEpoch);
+
+        Assert.Empty(result.Failures);
+        Assert.Equal("ok", result.Scenes.Single(e => e.Scene == "Login" && e.Theme == "dark").Status);
+    }
+
+    [Fact]
+    public void Merge_WhenOtherSceneRerun_ShouldKeepPriorFailure()
+    {
+        var existing = ManifestMerge.Merge(null,
+            [Entry("Login", "dark", "failed")], [Fail("Login", "dark")], "run-1", DateTimeOffset.UnixEpoch);
+
+        var result = ManifestMerge.Merge(existing,
+            [Entry("Home", "light", "ok")], [], "run-2", DateTimeOffset.UnixEpoch);
+
+        Assert.Contains(result.Failures, f => f.Scene == "Login" && f.Theme == "dark");
+        Assert.Equal("failed", result.Scenes.Single(e => e.Scene == "Login" && e.Theme == "dark").Status);
     }
 }

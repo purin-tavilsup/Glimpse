@@ -17,6 +17,8 @@ public sealed class SnapshotSession : ISnapshotRenderer, IDisposable
 {
     private const int MaxSettleIterations = 20;
 
+    private static readonly Typeface InterTypeface = new("Inter");
+
     private static int _instantiated;
 
     private readonly HeadlessUnitTestSession _session;
@@ -95,7 +97,7 @@ public sealed class SnapshotSession : ISnapshotRenderer, IDisposable
                     warnings.Add("scaling-ignored"); // headless 11.3.x has no DPI knob — see Task 6
 
                 warnings.AddRange(FrameAnalysis.Inspect(frame));
-                if (!FontManager.Current.TryGetGlyphTypeface(new Typeface("Inter"), out _))
+                if (!FontManager.Current.TryGetGlyphTypeface(InterTypeface, out _))
                     warnings.Add("font-inter-unresolved"); // tofu proxy: requested font did not resolve to a real typeface
 
                 return new RenderResult(stream.ToArray(), frame.PixelSize.Width, frame.PixelSize.Height, warnings);
