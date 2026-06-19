@@ -22,8 +22,8 @@ for f in "$TPL"/*.mmd "$TPL"/*.d2; do
     esac
 
     # For D2 templates, also verify icon URLs resolve (D2 icons fail silently).
-    if [ "${f##*.}" = "d2" ] && ! "$ROOT/scripts/check-d2-icons.sh" "$f" >/dev/null 2>&1; then
-        echo "FAIL  $name (broken icon URL — run scripts/check-d2-icons.sh $f)"
+    if [ "${f##*.}" = "d2" ] && ! "$ROOT/scripts/glimpse" --check-icons "$f" >/dev/null 2>&1; then
+        echo "FAIL  $name (broken icon URL — run scripts/glimpse --check-icons $f)"
         fail=1
         continue
     fi
