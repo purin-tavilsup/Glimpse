@@ -9,14 +9,13 @@ Render an artifact to a PNG, Read the PNG, judge it, improve the source, repeat.
 
 ## The loop
 
-1. **Render:** `./scripts/glimpse <source> [--renderer NAME] [--name NAME] [--theme dark] [--size WxH]`
-   (fast wrapper; equivalent to `dotnet run --project tools/Glimpse.Capture -- <source> …` but skips the per-call rebuild)
+1. **Render:** `glimpse <source> [--renderer NAME] [--name NAME] [--theme dark] [--size WxH]`
    - Renderer is inferred from extension (`.mmd`→mermaid, `.dot`/`.gv`→graphviz, `.d2`→d2, `.html`→web).
    - Add `--no-manifest` when rendering into a directory you want kept clean (e.g. `--out docs/diagrams`) — it skips writing `manifest.json` there.
 
    **Live macOS app (autonomous — no human needed to pick a window):**
-   - `./scripts/glimpse --renderer app --window "Chrome"` — finds the named app's frontmost on-screen window by itself and screenshots it (case-insensitive substring on the app name; add `--title "<substr>"` to disambiguate multiple windows). Falls back to a full-screen capture (with a `fullscreen-fallback` warning) if no window matches.
-   - `./scripts/glimpse --list-windows` — discover the on-screen windows (id, size, app, title) to confirm what you'll capture or to grab a `--window-id N` directly.
+   - `glimpse --renderer app --window "Chrome"` — finds the named app's frontmost on-screen window by itself and screenshots it (case-insensitive substring on the app name; add `--title "<substr>"` to disambiguate multiple windows). Falls back to a full-screen capture (with a `fullscreen-fallback` warning) if no window matches.
+   - `glimpse --list-windows` — discover the on-screen windows (id, size, app, title) to confirm what you'll capture or to grab a `--window-id N` directly.
    - The printed `Window:` line echoes the resolved window so you can confirm it captured the intended one.
    - **Permission caveat:** capturing another app needs Screen Recording permission for the terminal. If it's denied, `screencapture` may still write a PNG showing only the desktop/wallpaper (no error) — so when you Read the PNG, confirm the app window is actually visible. If it's just desktop, grant: System Settings → Privacy & Security → Screen Recording → enable your terminal, then re-run.
 2. **Read the printed `PNG:` path** with the Read tool — actually look at it.
