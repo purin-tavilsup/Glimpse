@@ -1,5 +1,8 @@
 # Build outputs
 bin/
+# ...but the plugin's committed CLI wrapper is source, not build output
+!plugin/bin/
+!plugin/bin/glimpse
 obj/
 *.user
 .vs/
