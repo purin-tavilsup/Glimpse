@@ -102,4 +102,4 @@ The test suite includes a real mermaid end-to-end gate that renders an actual di
 
 ## License
 
-No license yet — all rights reserved until one is added.
+[MIT](LICENSE) © 2026 Purin Tavilsup
