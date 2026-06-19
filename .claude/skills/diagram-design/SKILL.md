@@ -6,28 +6,36 @@ description: >-
   a system, service, or flow — architecture/component diagrams, authentication or API
   request flows, state machines / lifecycles, data models (ER), or decision flowcharts —
   even if they don't say the word "diagram" (e.g. "show how login works", "map out our
-  services", "visualize the order lifecycle"). It routes the request to the RIGHT diagram
-  type, applies a clean house style, and renders + visually checks the result via the
-  glimpse skill. Prefer this skill over free-handing a diagram.
+  services", "visualize the order lifecycle"). It gives diagrams a clean, consistent house
+  style — labeled soft-fill containers, proper datastore/actor shapes, meaningful colors —
+  on a sensible diagram type, then renders + visually verifies the result via the glimpse
+  skill. Prefer this over free-handing a diagram.
 ---
 
 # Diagram Design
 
-A valid diagram and a *clear* diagram are different things. This skill exists to produce
-the clear kind — the picture someone grasps in a few seconds. Two ideas do most of the
-work: **pick the diagram type that matches the message**, and **look at the rendered
-result and fix what's confusing** (you can't judge a diagram from its source — render it
-and read the PNG).
+A valid diagram and a *clear* diagram are different things. This skill produces the clear
+kind — the picture someone grasps in a few seconds.
+
+**Where the leverage is (and isn't):** picking the diagram *type* usually isn't the hard
+part — the right type is normally obvious from the ask, and a capable model gets it. What's
+easy to get wrong, and what this skill is really for, is **(1) a consistent, readable
+visual style** — labeled containers, a soft palette, the right shapes — so diagrams look
+like they belong together and communicate at a glance; and **(2) trusting the source
+instead of the render** — you can't judge a diagram from its text, so render it and read
+the PNG.
 
 ## The loop
 
 1. **Audience & message.** Decide who reads this and the *one* thing they must take away.
    One diagram = one message. If the intent is genuinely ambiguous, ask the user.
-2. **Route to a diagram type** by intent (table below).
+2. **Confirm the diagram type** — usually obvious from the ask; glance at the table below
+   only if you're unsure or it's genuinely ambiguous.
 3. **Pick notation/renderer** for that type. For architecture, also pick the C4 level and
    layered-vs-icon-cloud mode.
 4. **Draft from the matching template** in `templates/` — copy and fill, don't start blank.
-   The templates carry the house style so output looks right by default.
+   This is where most of the value is: the templates carry the house style, so the output
+   looks consistent and readable by default. Keep that style (don't drift to defaults).
 5. **Render** it via the `glimpse` skill (see "Rendering" below) → PNG.
 6. **Read the PNG and judge it** against the checklist below + that type's anti-patterns.
    Glimpse's `single-color`/blank warnings flag a broken render (bad syntax, missing
@@ -36,10 +44,11 @@ and read the PNG).
 8. **Stop** when the message lands at a glance and the render is clean. Cap at 5
    iterations; if it isn't converging, stop and tell the user what's stuck.
 
-## Route by intent
+## Route by intent (quick sanity check)
 
-Match the request to a type before drawing — the most common mistake is forcing
-everything into boxes-and-arrows.
+The right type is usually clear from the ask, so treat this as a quick check, not a
+decision you have to agonize over — it mainly earns its keep on genuinely ambiguous
+requests. The one mismatch actually worth watching for is below the table.
 
 | The user wants to show… | Type | Renderer | Template |
 |---|---|---|---|
