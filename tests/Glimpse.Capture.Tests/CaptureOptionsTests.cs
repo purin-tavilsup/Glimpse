@@ -53,4 +53,16 @@ public class CaptureOptionsTests
     {
         Assert.Throws<ArgumentException>(() => CaptureOptions.Parse(["x.mmd", "--bogus"]));
     }
+
+    [Fact]
+    public void Parse_WithNonIntegerWindowId_ShouldThrow()
+    {
+        Assert.Throws<ArgumentException>(() => CaptureOptions.Parse(["--renderer", "app", "--window-id", "foo"]));
+    }
+
+    [Fact]
+    public void Parse_WithNonPositiveSize_ShouldThrow()
+    {
+        Assert.Throws<ArgumentException>(() => CaptureOptions.Parse(["x.mmd", "--size", "0x0"]));
+    }
 }
