@@ -57,7 +57,7 @@ The skill makes the agent follow this loop:
 6. **Judge** by Reading the PNG against the universal checklist + that type's
    anti-patterns. Glimpse's mechanical checks (blank/single-color) catch pipeline breaks.
 7. **Iterate** (edit source, re-render).
-8. **Stop** when the message lands at a glance and checks are clean. Cap ~5–6 iterations;
+8. **Stop** when the message lands at a glance and checks are clean. Cap at 5 iterations;
    if not converging, stop and report what's stuck.
 
 ## 4. Diagram-Type Router
@@ -81,7 +81,13 @@ The skill makes the agent follow this loop:
   networks, regions/zones).
 - **Dynamic view:** numbered step badges (①②③…) overlaid on a container diagram to trace
   a flow through the static structure — the user's #2 numbered-badge technique. Use when
-  "show how a request flows through the architecture."
+  "show how a request flows through the architecture." Works in either mermaid layered or
+  D2 — it is a labeling technique, not a separate diagram.
+
+> **Deployment and Dynamic are *modes/uses* of the layered (`layered.mmd`) or icon-cloud
+> (`cloud.d2`) templates — they need no separate template files.** Deployment is also
+> orthogonal to C4 levels L1–L3 (it maps containers to infrastructure); folding it into
+> icon-cloud mode is a pragmatic choice in this skill, not canonical C4.
 
 **Renderer selection rule:** cloud services / "AWS"/"GCP"/"Azure" / wants logos → D2
 icon-cloud; logical layers / components / processes → mermaid.
@@ -103,6 +109,15 @@ Defaults baked into the templates so output matches the user's taste:
 - **Numbered step badges** available for dynamic/sequence-over-structure.
 - **Title** (and footer where useful) for framing.
 
+**Per-renderer style caveats (don't apply a convention a renderer can't honor):**
+- **Arrow color (call vs return)** works only in mermaid `flowchart`/architecture and D2.
+  In mermaid `sequenceDiagram`, arrows cannot be individually colored — use **solid
+  (`->>`) = call / dashed (`-->>`) = return** instead.
+- **`erDiagram` ignores flow direction** (no `TB`/`LR`) — the "one flow direction" rule
+  does not apply to ER; don't add a direction specifier (it breaks the render).
+- **`stateDiagram-v2`** uses `[*]` for both the initial and final pseudo-state — never
+  literal `start`/`end` node names.
+
 ## 6. Knowledge Carried
 
 **C4 levels** (architecture only — pick one per diagram, never mix):
@@ -111,9 +126,10 @@ Defaults baked into the templates so output matches the user's taste:
 - **L3 Component** — inside one container, for devs on that part.
 - *(L4 Code — skip unless explicitly asked.)*
 
-**Universal principles:** one message; ≤ ~9 boxes per zone (split if more); label every
-box and edge; legend when color/shape encodes meaning; consistent shapes; one flow
-direction; meaningful (not decorative) color; annotate the non-obvious; spell out
+**Universal principles:** one message; ≤ ~9 boxes per zone (split if more — for sequence
+diagrams this limit is on *participants*, not messages); label every box and edge; legend
+when color/shape encodes meaning; consistent shapes; one flow direction (except ER, which
+auto-lays out); meaningful (not decorative) color; annotate the non-obvious; spell out
 acronyms; give it a title.
 
 **Anti-patterns catalog** (general): wrong diagram type for the message; mixed abstraction
@@ -121,11 +137,16 @@ levels; the box-wall (too many nodes); unlabeled arrows; no legend / inconsisten
 notation; spaghetti edge crossings; kitchen-sink (more than one message); acronym soup;
 decorative color with no meaning; no clear entry point or flow direction.
 
-**Per-type anti-patterns** (examples, full set in `reference.md`):
+**Per-type anti-patterns** (examples; the full catalog is authored into `reference.md`
+during implementation):
 - *Sequence:* missing actor; messages without labels; no return arrows where they matter;
-  implying time order that isn't there.
-- *State:* missing initial/final state; unlabeled transitions; unreachable states.
-- *ER:* unlabeled relationships; missing cardinality; attributes as separate boxes.
+  implying time order that isn't there; over-nesting `alt`/`loop`/`opt` frames (use `alt`
+  for conditions, `loop` for retries/polling — keep nesting ≤ 1 level deep).
+- *State:* missing initial/final state (use `[*]`); unlabeled transitions; unreachable
+  states.
+- *ER:* unlabeled relationships; missing cardinality; attributes as separate boxes;
+  many-to-many without a junction entity (surface the junction when it has its own
+  attributes).
 - *Flowchart:* decision nodes without yes/no labels; no single start; crossing flows.
 - *Architecture:* mixing C4 levels; logical and deployment concerns in one diagram.
 
@@ -157,33 +178,41 @@ decorative color with no meaning; no clear entry point or flow direction.
 
 ## 8. Integration with glimpse
 
-The skill does not render; it calls the `glimpse` skill:
-- mermaid templates → `dotnet run --project tools/Glimpse.Capture -- <file>.mmd --name <n>`
-- D2 templates → `… <file>.d2 --name <n>` (d2 renderer; requires `brew install d2`)
-- Use `--no-manifest` when rendering exemplars into the skill's `examples/` dir.
-- Read the printed PNG path, judge, iterate.
+The skill does not render; it calls the `glimpse` skill. Exact command forms:
+- **mermaid** (sequence/state/ER/flowchart/layered):
+  `dotnet run --project tools/Glimpse.Capture -- <file>.mmd --name <n>`
+- **D2** (icon-cloud architecture):
+  `dotnet run --project tools/Glimpse.Capture -- <file>.d2 --name <n>`
+  (renderer inferred from the `.d2` extension; requires `brew install d2`)
+- Rendering exemplars into the skill's `examples/` dir adds
+  `--out .claude/skills/diagram-design/examples --no-manifest` (keeps that dir clean).
+- Read the printed PNG path, judge against the §6 checklist, iterate.
 
 ## 9. Renderer Requirements
 
 - **mermaid** (`mmdc`) — already installed; covers sequence/state/ER/flowchart/layered.
-- **d2** — `brew install d2`; only needed for icon-cloud architecture. The skill notes
-  this and degrades gracefully (falls back to mermaid layered if d2 is absent and icons
-  aren't essential).
+- **d2** — `brew install d2`; only needed for icon-cloud architecture. If d2 is absent,
+  the skill informs the user, skips icon rendering, and uses `layered.mmd` instead.
+- **D2 icons fail silently** — a wrong `icon:` URL renders nothing (no error), so the
+  agent must verify icons appear when it Reads the PNG, and confirm icon URLs before
+  templating.
 
 ## 10. Acceptance / "Done"
 
 - `diagram-design` skill triggers on diagram requests and routes to the correct type.
 - An authentication-flow request produces a **sequence diagram** (not an architecture
   box diagram) — the motivating cross-check.
-- Each of the 6 templates renders clean through glimpse (no blank/single-color warning),
-  proven by a committed exemplar PNG in `examples/`.
+- All template files (6: `layered.mmd`, `cloud.d2`, `sequence.mmd`, `state.mmd`,
+  `er.mmd`, `flowchart.mmd` — covering the 5 diagram types) render clean through glimpse
+  (no blank/single-color warning), each proven by a committed exemplar PNG in `examples/`.
 - Output visibly matches the house style (soft-fill labeled containers, cylinders,
   meaningful colors, title).
 
 ## 11. Build Order (for implementation)
 
 1. Skill scaffold: `SKILL.md` frontmatter + the §3 loop + §4 router (skeleton).
-2. The 6 templates, each rendered + visually checked via glimpse → exemplar PNG.
+2. The 6 template files, each rendered + visually checked via glimpse against the §6
+   checklist → exemplar PNG in `examples/`.
 3. `reference.md` (C4 detail + full anti-pattern catalog + palette hex).
 4. Fill SKILL.md body (house style, principles, anti-patterns, glimpse hand-off).
 5. End-to-end self-test: run an "auth flow" and an "architecture" request through the
