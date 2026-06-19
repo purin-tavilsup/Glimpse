@@ -85,6 +85,9 @@ These defaults make a diagram readable and are baked into the templates:
 - **A title**, and a footer when it adds context.
 - **Keep it small** — aim for ≤ ~9 nodes per zone; split or go up a C4 level if it bloats.
   (For sequence diagrams this applies to *participants*, not messages.)
+- **Human actors** use the bundled person icon (`assets/user.png`), not a plain box/pill —
+  see "Actor / user icon" in `reference.md` for the mermaid (data-URI) and D2 syntax.
+  Sequence diagrams keep the standard `actor` stick figure.
 
 ## Anti-patterns to avoid
 
