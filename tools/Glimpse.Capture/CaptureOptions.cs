@@ -30,7 +30,12 @@ public sealed record CaptureOptions(
                 case "--name": name = Next(args, ref i); break;
                 case "--out": outDir = Next(args, ref i); break;
                 case "--theme": theme = ThemeFor(Next(args, ref i)); break;
-                case "--window-id": windowId = int.Parse(Next(args, ref i)); hasWindowId = true; break;
+                case "--window-id":
+                    var windowIdRaw = Next(args, ref i);
+                    if (!int.TryParse(windowIdRaw, out windowId))
+                        throw new ArgumentException("--window-id requires an integer.");
+                    hasWindowId = true;
+                    break;
                 case "--prune": prune = true; break;
                 case "--size": (width, height) = SizeFor(Next(args, ref i)); break;
                 default:
@@ -67,6 +72,8 @@ public sealed record CaptureOptions(
         var parts = size.Split('x');
         if (parts.Length != 2 || !int.TryParse(parts[0], out var w) || !int.TryParse(parts[1], out var h))
             throw new ArgumentException($"Invalid --size '{size}' (expected WIDTHxHEIGHT, e.g. 1280x800).");
+        if (w <= 0 || h <= 0)
+            throw new ArgumentException("--size dimensions must be positive (e.g. 1280x800).");
         return (w, h);
     }
 }
