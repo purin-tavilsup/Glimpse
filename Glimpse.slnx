@@ -10,7 +10,11 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Glimpse.Avalonia.Tests/Glimpse.Avalonia.Tests.csproj" />
+    <Project Path="tests/Glimpse.Capture.Tests/Glimpse.Capture.Tests.csproj" />
     <Project Path="tests/Glimpse.Core.Tests/Glimpse.Core.Tests.csproj" />
     <Project Path="tests/Glimpse.ScratchConsole.Tests/Glimpse.ScratchConsole.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Glimpse.Capture/Glimpse.Capture.csproj" />
   </Folder>
 </Solution>
