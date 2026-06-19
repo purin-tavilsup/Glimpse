@@ -111,11 +111,12 @@ Don't judge a diagram from its source — render and look. The `glimpse` skill t
 source file into a PNG you can Read:
 
 ```
-# mermaid (sequence / state / ER / flowchart / layered architecture)
-dotnet run --project tools/Glimpse.Capture -- <file>.mmd --name <name>
+# Fast wrapper (preferred — runs the built CLI directly, no rebuild each call):
+./scripts/glimpse <file>.mmd --name <name>     # mermaid: sequence/state/ER/flowchart/layered
+./scripts/glimpse <file>.d2  --name <name>     # D2 icon-cloud (renderer inferred from .d2)
 
-# D2 (icon-cloud architecture) — renderer inferred from .d2
-dotnet run --project tools/Glimpse.Capture -- <file>.d2 --name <name>
+# Equivalent, slower (rebuilds every call):
+dotnet run --project tools/Glimpse.Capture -- <file>.mmd --name <name>
 ```
 
 Read the printed `PNG:` path, judge it, iterate. When saving reference exemplars into this
