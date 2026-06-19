@@ -128,5 +128,7 @@ to keep that dir clean.
 - **mermaid** (`mmdc`) for everything except icon-cloud — usually already installed.
 - **D2** (`brew install d2`) only for icon-cloud architecture. If D2 is missing, tell the
   user, then fall back to `layered.mmd` (no icons). **D2 icons fail silently** — a wrong
-  `icon:` URL renders nothing with no error, so always Read the PNG and confirm the icons
-  actually appear.
+  `icon:` URL renders nothing with no error. So for any `.d2` with icons:
+  **before rendering, run `./scripts/check-d2-icons.sh <file>.d2`** — it HTTP-checks every
+  icon URL and fails on any that don't resolve (deterministic). Then still Read the PNG to
+  confirm the icons appear.

@@ -121,9 +121,10 @@ person icon is bundled at `assets/user.png` (the source of truth).
 **D2 (icon-cloud)**
 - `shape: image` + `icon: <url>` makes a service node (icon with label beneath).
 - Group services with containers (`gcp: Google Cloud { … }`); nest freely.
-- **Icons fail silently.** Verify each URL returns HTTP 200 before using it, and Read the
-  rendered PNG to confirm icons appear. Catalog: `https://icons.terrastruct.com`.
-  Encode spaces as `%20` and path separators as `%2F` in the URL.
+- **Icons fail silently.** Run `./scripts/check-d2-icons.sh <file>.d2` — it HTTP-checks
+  every `icon:` URL and fails on any non-200 (deterministic; a dead URL renders nothing
+  with no error). Then still Read the PNG to confirm icons appear. Catalog:
+  `https://icons.terrastruct.com`. Encode spaces as `%20` and path separators as `%2F`.
 - Title: a `shape: text` node with `near: top-center` (a markdown `|md|` title block can
   clip at the canvas top).
 - Verified-good icon URLs (examples): GitHub `dev%2Fgithub.svg`; GCP Cloud Run
