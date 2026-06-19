@@ -1,0 +1,41 @@
+---
+title: "Order Service — Container View (C4 L2)"
+---
+%% TEMPLATE: layered architecture (C4 container view) — mermaid.
+%% Frontmatter title MUST be the first line. Keep the house style: soft-fill layer
+%% subgraphs, rounded component boxes, [(cylinders)] for datastores, [[queues]] for infra,
+%% black solid edges = call, red dashed edge = return. Rename for the real system.
+flowchart TB
+    user([User]):::actor
+
+    subgraph PL [Presentation Layer]
+        web[Web App<br/>React SPA]:::ui
+    end
+
+    subgraph AL [Application Layer]
+        api[Order API<br/>.NET]:::svc
+    end
+
+    subgraph DL [Data Layer]
+        db[(Postgres<br/>orders)]:::data
+        mq[[Message Queue<br/>order events]]:::infra
+    end
+
+    user -->|places order| web
+    web -->|POST /orders| api
+    api -->|read / write| db
+    api -->|publish OrderCreated| mq
+    api -.->|201 Created| web
+
+    classDef actor fill:#ede9fe,stroke:#6d28d9,color:#2e1065;
+    classDef ui fill:#e0e7ff,stroke:#4338ca,color:#1e1b4b;
+    classDef svc fill:#dcfce7,stroke:#15803d,color:#14532d;
+    classDef data fill:#dcfce7,stroke:#15803d,color:#14532d;
+    classDef infra fill:#fef9c3,stroke:#a16207,color:#422006;
+
+    style PL fill:#fdf6ec,stroke:#e7d9c4,color:#5b4636
+    style AL fill:#fdf6ec,stroke:#e7d9c4,color:#5b4636
+    style DL fill:#fdf6ec,stroke:#e7d9c4,color:#5b4636
+
+    %% edge 4 is the return — color it red to distinguish call vs return
+    linkStyle 4 stroke:#ef4444,color:#ef4444

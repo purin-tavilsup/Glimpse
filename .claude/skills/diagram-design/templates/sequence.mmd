@@ -1,0 +1,29 @@
+---
+title: "Login — OAuth Authorization Code Flow"
+---
+%% TEMPLATE: sequence diagram — mermaid (frontmatter title must be line 1). For flows over
+%% time between parties: auth/login, OAuth handshake, API request lifecycle. Solid (->>) =
+%% call/request, dashed (-->>) = return/response (sequence arrows can't be colored). Label
+%% every message. Use alt for conditions, loop for retries — nest at most one level deep.
+sequenceDiagram
+    autonumber
+    actor User
+    participant Web as Web App
+    participant Auth as OAuth Provider
+    participant API as API
+
+    User->>Web: Click "Log in"
+    Web->>Auth: Redirect to /authorize
+    Auth->>User: Show login + consent
+    User->>Auth: Submit credentials
+    Auth-->>Web: Redirect back with code
+
+    Web->>Auth: Exchange code for token
+    Auth-->>Web: Access token
+
+    alt token valid
+        Web->>API: GET /me (Bearer token)
+        API-->>Web: 200 profile
+    else token rejected
+        API-->>Web: 401 Unauthorized
+    end

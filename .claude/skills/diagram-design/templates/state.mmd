@@ -1,0 +1,16 @@
+---
+title: "Order Lifecycle"
+---
+%% TEMPLATE: state machine — mermaid stateDiagram-v2 (frontmatter title must be line 1).
+%% For lifecycles / status transitions. Use [*] for the initial AND final pseudo-state
+%% (never literal start/end nodes). Label every transition with the event that causes it.
+stateDiagram-v2
+    [*] --> Created
+
+    Created --> Paid: payment captured
+    Created --> Cancelled: cancelled by user
+    Paid --> Shipped: dispatched
+    Paid --> Cancelled: refunded
+    Shipped --> Delivered: received
+    Delivered --> [*]
+    Cancelled --> [*]
