@@ -1,0 +1,28 @@
+---
+title: "Order Checkout — Process"
+---
+%% TEMPLATE: flowchart (process / decision logic) — mermaid (frontmatter title must be
+%% line 1). One start node. Decision nodes are {diamonds} with every branch labeled
+%% (yes/no). Keep one flow direction. Soft fills: start/end pill, process box, decision.
+flowchart TD
+    start([Start: cart submitted]):::startend
+    validate[Validate cart]:::proc
+    instock{In stock?}:::decision
+    pay[Charge payment]:::proc
+    paid{Payment ok?}:::decision
+    confirm[Create order<br/>+ confirm]:::proc
+    reject[Show error]:::proc
+    done([End]):::startend
+
+    start --> validate --> instock
+    instock -->|yes| pay
+    instock -->|no| reject
+    pay --> paid
+    paid -->|yes| confirm
+    paid -->|no| reject
+    confirm --> done
+    reject --> done
+
+    classDef startend fill:#ede9fe,stroke:#6d28d9,color:#2e1065;
+    classDef proc fill:#e0e7ff,stroke:#4338ca,color:#1e1b4b;
+    classDef decision fill:#fef9c3,stroke:#a16207,color:#422006;
