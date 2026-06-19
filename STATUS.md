@@ -67,6 +67,19 @@ derived from Pond's reference diagrams, rendering + verifying via glimpse.
    no integration test over `Program.cs` manifest-write path.
 5. Polish: dynamic-view (numbered-badge) exemplar; cloud template labels GCP "Container
    Registry" icon as "Artifact Registry" (closest match).
+6. **Distribution (in progress):** spec `docs/superpowers/specs/2026-06-19-glimpse-distribution-design.md`
+   — Option B (skills-directory plugin, symlinked, no marketplace) on branch
+   `feat/glimpse-distribution`. **macOS-only for now.**
+7. **🔭 Cross-platform (Windows) — come back later.** Port `ToolLocator` (`which`→`where`),
+   add a Windows `glimpse` entrypoint (real binary, not the bash `bin/glimpse` wrapper),
+   fix the Chrome path; live-app capture would need a Windows window-finder + capture.
+   Diagram rendering is the near-term win (mermaid/d2 are already cross-platform). Folds in
+   with item 8.
+8. **🔭 Option C — publish as a marketplace plugin (later, when stable + sharing).** Add a
+   `marketplace.json` so anyone can `/plugin marketplace add purin-tavilsup/Glimpse` →
+   `/plugin install glimpse`. Needs a *pre-built, committed* cross-platform binary in the
+   plugin `bin/` (marketplace can't build .NET) — same slot the Windows port (item 7)
+   fills, so do them together. Detail in the distribution spec §9.
 
 ## Environment notes
 - `mmdc` (mermaid-cli) + `d2` (`brew install d2`) installed. Chrome present for `web`.
