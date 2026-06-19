@@ -178,10 +178,13 @@ Once installed, from `~/dev/Recorder`:
   templates clean and checks `cloud.d2` via `--check-icons` — no global install required.
 - **Install verification (manual — the real proof, and the #1 risk):**
   1. **Does a *symlinked* skills-directory plugin load, and does `bin/glimpse` land on
-     `PATH`?** This is the load-bearing assumption of Option B. Verify right after
-     `install.sh` (+ `/reload-plugins`): the skills appear and `glimpse` resolves on PATH.
-     **Fallback if symlinks aren't honored for plugins:** `install.sh` *copies* the plugin
-     instead (loses always-current; re-run on edits) — note this in the script.
+     `PATH`?** This is the load-bearing assumption of Option B. ✅ **VALIDATED 2026-06-19
+     via a throwaway spike:** a symlinked `~/.claude/skills/glimpse-spike` showed in
+     `claude plugin list` as `glimpse-spike@skills-dir`, its skill was recognized by
+     `claude plugin details`, and a fresh headless session resolved `which glimpse-spike`
+     to the plugin's `bin/`. Note: skills-dir plugins **auto-load next session** (restart
+     or `/reload-plugins`), not mid-session. **Fallback if it ever regresses:**
+     `install.sh` *copies* the plugin instead of symlinking (loses always-current).
   2. From `~/dev/Recorder` (a different repo): `glimpse <a test .mmd>` renders a real PNG
      (proves the CLI + SkiaSharp natives work outside this repo), and the `diagram-design`
      skill is available there; plus a live `--window "Recorder"` capture.
