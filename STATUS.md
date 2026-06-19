@@ -42,9 +42,17 @@ derived from Pond's reference diagrams, rendering + verifying via glimpse.
   any non-clean render (guards against mermaid/D2 upgrades). All 6 pass (~4s).
 
 ## Deferred / next actions
-1. **diagram-design proof + reach:** add an *ambiguous-routing* test (the one real gap in
-   proving the router beats a capable base model); run the deferred *description-
-   optimization* loop for trigger accuracy (20 trigger-eval queries already drafted).
+1. **diagram-design proof + reach:**
+   - ~~ambiguous-routing test~~ — ✅ **DONE.** 3 trap prompts (keywords pulling toward the
+     wrong type) × with-skill/baseline. **Result: both arms routed all 3 correctly,
+     including baseline.** Negative finding: the router does NOT earn its place on
+     type-selection — a capable base model already infers the right type from semantics.
+     The skill's real, demonstrated value is **house style + notation discipline**
+     (iteration-1: 16/16 vs 13/16), not routing. Consider reframing SKILL.md to lead with
+     style/consistency; keep the router as cheap insurance for weaker models / truly
+     ambiguous asks.
+   - Still open: the *description-optimization* loop for trigger accuracy (20 trigger-eval
+     queries already drafted).
 2. ~~D2 silent-fail icons~~ — ✅ **DONE (accuracy push).** `scripts/check-d2-icons.sh`
    HTTP-checks every `icon:` URL deterministically (a dead URL renders nothing in D2 with
    no error); wired into the diagram-design skill flow + the template smoke test. Remaining
