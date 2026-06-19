@@ -21,8 +21,11 @@ public sealed class ProcessRunner : IProcessRunner
         using var process = Process.Start(startInfo)
             ?? throw new GlimpseRenderToolException(executable, $"Failed to start '{executable}'.");
 
-        var stderr = await process.StandardError.ReadToEndAsync();
+        var stdoutTask = process.StandardOutput.ReadToEndAsync();
+        var stderrTask = process.StandardError.ReadToEndAsync();
+        await Task.WhenAll(stdoutTask, stderrTask);
         await process.WaitForExitAsync();
+        var stderr = await stderrTask;
         return new ProcessResult(process.ExitCode, stderr);
     }
 }
