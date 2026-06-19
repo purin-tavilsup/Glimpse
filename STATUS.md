@@ -1,65 +1,67 @@
-# STATUS — UI Snapshot Tool (Glimpse)
+# STATUS — Glimpse
 
-> Goal: a general-purpose tool so Claude can *see* rendered UI by reading PNGs.
-> Last updated: 2026-06-16.
+> Goal: tools so an agent can *see* rendered UI/diagrams (read PNGs) and iterate.
+> Repo: https://github.com/purin-tavilsup/Glimpse (public, MIT). Last updated: 2026-06-18.
 
-## Current state: ✅ ENGINE IMPLEMENTED + MERGED TO `main` (local)
+## Current state: ✅ TWO HALVES SHIPPED + PUBLISHED
 
-Built subagent-driven (TDD per task + spec/quality review gate per task + opus
-whole-branch review). All 13 implementation tasks done; merged `--no-ff` into
-`main` (merge commit `7d7033e`). **Full suite: 42 passed + 2 skipped** (both
-documented), format clean. **No git remote yet** — local only.
+Everything below is merged to `main` and pushed to the personal GitHub repo
+(`purin-tavilsup/Glimpse`), authored under the personal identity. Branch `main`
+clean; .NET suite green (78 passed / 2 skipped — pre-existing Avalonia skips).
 
-### What shipped
-- `Glimpse.Abstractions` — `SnapshotTheme`, `SnapshotSize` (framework-free).
-- `Glimpse.Avalonia.Abstractions` — `IScene` (returns `Control`, default `ReadyAsync`).
-- `Glimpse.Avalonia` — headless engine: `HeadlessSnapshotApp` (Skia + Inter +
-  Fluent), `SnapshotSession` (one-shot/process, stability-based settle loop,
-  `Render(Func<Control>)` builds on the UI thread, `RenderSceneAsync(IScene)`),
-  `EnvironmentGuard` (net10 + Avalonia 11.3.x fail-fast), `FrameAnalysis`
-  (single-color + font/tofu warnings), theme variants, determinism.
-- `Glimpse.Core` (framework-free) — `OutputLocator` (per-repo/central),
-  `Manifest`/`SceneEntry`/`Failure` + `ManifestMerge` (atomic, upsert by
-  `(Scene,Theme)` for BOTH scenes and failures), `SnapshotWriter`,
-  `ScreenCapture`/`ScreenCaptureCommand` (macOS `screencapture`).
-- `Glimpse.ScratchConsole` (+ `Glimpse.ScratchConsole.Tests`) — CLI +
-  `SnapshotRunner` (exit 0/1/2, failed-never-ok) + sample scenes +
-  **automated e2e gate** (real session → writer → manifest; `ThemedControls`
-  scene proves FluentTheme resource/template resolution).
+### 1. Glimpse render-loop harness (the "see" half)
+Renderer-agnostic visual-feedback harness: any UI/diagram → PNG → agent Reads it →
+critique → improve → repeat. Generic command→PNG renderer contract.
+- `Glimpse.Core` — `RendererRegistry` + `BuiltInRenderers` (mermaid/graphviz/d2/web/
+  screencapture), `ToolLocator`, `RenderCommandBuilder`, `ProcessRunner` + `RenderEngine`
+  (resolve→run→analyse→outcome, exit 0/1/2), `PngAnalysis` (blank/single-color), manifest
+  + `SnapshotWriter` (stable-name `PngPath`, `Prune`, `--no-manifest`).
+- `tools/Glimpse.Capture` — the CLI (`--renderer --name --out --size --theme --window-id
+  --prune --no-manifest`).
+- `glimpse` skill — packages the render→Read→judge→iterate loop.
+- **Avalonia engine left untouched** (parked, still present as an optional renderer).
+- Built subagent-driven: 8 TDD tasks, per-task + whole-branch review (caught a real
+  ProcessRunner stdout deadlock). Spec/plan in `docs/superpowers/`.
 
-### Key facts learned (verified vs Avalonia 11.3.17)
-- Headless `HeadlessUnitTestSession.StartNew(type)` reflectively calls the type's
-  static `BuildAvaloniaApp()`. `CaptureRenderedFrame()` → `WriteableBitmap?`.
-- **No headless DPI/scaling knob** → scaling descoped to 1.0 (`scaling-ignored`
-  warning + skipped contract test).
-- **Controls must be built on the UI thread** (TextBlock throws "Call from
-  invalid thread" off-thread) → sync API is `Render(Func<Control>)`.
+### 2. diagram-design skill (the "what good looks like" half)
+Agent skill that routes a request to the right diagram type and applies a house style
+derived from Pond's reference diagrams, rendering + verifying via glimpse.
+- Routes: architecture/C4 (mermaid layered + D2 icon-cloud), sequence (auth flows),
+  state machine, ER, flowchart. `SKILL.md` + 6 templates + `reference.md` + exemplars.
+- House style: soft-fill labeled containers, cylinders for datastores, meaningful
+  call/return arrow colors, bundled **person icon** (`assets/user.png`, embedded as a
+  portable data URI in mermaid). D2 icons via Terrastruct (GCP/GitHub verified).
+- Validated with-skill vs baseline (16/16 vs 13/16; wins on notation discipline +
+  house style; baseline already strong at type routing). Brainstorm → spec → 2-lens
+  subagent spec review → skill-creator build.
 
-## Active thread: live-screenshot skill (spec written, AWAITING POND REVIEW)
-
-Second delivery mode, brainstormed + spec'd 2026-06-16: a `glimpse` skill that
-screenshots a **live running desktop app** via macOS `screencapture` (any app, no
-Avalonia engine, sidesteps cross-repo distribution). Decisions: window-if-findable
-else whole-screen; **.NET CLI-backed** (extend `Glimpse.Core` with CoreGraphics
-window-id lookup + new `tools/Glimpse.Capture` console); **capture-only** (assumes app
-running — composes with `/run`); **no screenshot accumulation** (stable-name overwrite +
-per-run prune in a `screenshots/` subdir).
-- Spec: `docs/superpowers/specs/2026-06-16-glimpse-live-screenshot-skill-design.md` (committed `7e0f1fa`).
-- **NEXT:** Pond reviews the spec → `writing-plans` → implement (build order in spec §9).
+### Dev ergonomics (just added)
+- `scripts/glimpse` — fast wrapper (runs the built DLL, skips per-call `dotnet run`
+  rebuild). `GLIMPSE_REBUILD=1` forces a rebuild.
+- `scripts/check-diagram-templates.sh` — smoke test: renders all 6 templates, fails on
+  any non-clean render (guards against mermaid/D2 upgrades). All 6 pass (~4s).
 
 ## Deferred / next actions
-1. **Recorder preview console** (spec §4.5) — the first *real* app consumer.
-   Separate repo (`~/dev/Recorder` under `Tools/`); blocked on the cross-repo
-   distribution decision (spec §9.5: project ref vs local/internal NuGet feed).
-   Its own brainstorm→plan when picked up. **Recorder untouched by this work.**
-2. **GitHub remote** — none configured. Add one if/when sharing.
-3. **Follow-up minors** (fast-follow, non-blocking — from reviews):
-   - `OutputLocator` now uses `Path.Exists` for `.git` (worktree-safe) ✅ done in fix wave.
-   - `settle-cap-hit` warning path untested (no headless animation clock) — accepted.
-   - Test-strength polish (temp-dir cleanup; tighten a couple of assertions).
-4. Spec §8 futures: skill packaging (`glimpse`), web/mobile modules, visual diff.
+1. **diagram-design proof + reach:** add an *ambiguous-routing* test (the one real gap in
+   proving the router beats a capable base model); run the deferred *description-
+   optimization* loop for trigger accuracy (20 trigger-eval queries already drafted).
+2. **D2 icon cheat-sheet** in `reference.md` — only a few GCP/GitHub URLs verified; AWS/
+   Azure would hit the silent-fail problem.
+3. **`app` renderer (live-window screenshot)** — fully spec'd
+   (`docs/superpowers/specs/2026-06-16-glimpse-live-screenshot-skill-design.md`) but
+   never built (only `--window-id`, no window-name→id lookup). Implement or formally shelve.
+4. **Glimpse review minors** (non-blocking): JSON renderer-override merge path untested;
+   no integration test over `Program.cs` manifest-write path.
+5. Polish: dynamic-view (numbered-badge) exemplar; cloud template labels GCP "Container
+   Registry" icon as "Artifact Registry" (closest match).
+
+## Environment notes
+- `mmdc` (mermaid-cli) + `d2` (`brew install d2`) installed. Chrome present for `web`.
+- Python 3.13 installed (`/opt/homebrew/bin/python3.13`) — needed for the skill-creator
+  eval viewer (`generate_review.py`, requires 3.10+).
+- `gh` has two accounts; this repo's git identity + push routing use `purin-tavilsup`.
 
 ## Artifacts
-- Spec: `docs/superpowers/specs/2026-06-15-ui-snapshot-tool-design.md`
-- Plan (executed): `docs/superpowers/plans/2026-06-16-glimpse-ui-snapshot-tool.md`
-- SDD progress ledger: `.git/sdd/progress.md` (per-task commits + review notes)
+- Specs/plans: `docs/superpowers/{specs,plans}/`
+- SDD ledgers: `.git/sdd/progress.md`
+- Eval workspace (gitignored): `.claude/skills/diagram-design-workspace/`

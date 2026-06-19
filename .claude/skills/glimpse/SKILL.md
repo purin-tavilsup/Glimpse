@@ -9,7 +9,8 @@ Render an artifact to a PNG, Read the PNG, judge it, improve the source, repeat.
 
 ## The loop
 
-1. **Render:** `dotnet run --project tools/Glimpse.Capture -- <source> [--renderer NAME] [--name NAME] [--theme dark] [--size WxH]`
+1. **Render:** `./scripts/glimpse <source> [--renderer NAME] [--name NAME] [--theme dark] [--size WxH]`
+   (fast wrapper; equivalent to `dotnet run --project tools/Glimpse.Capture -- <source> …` but skips the per-call rebuild)
    - Renderer is inferred from extension (`.mmd`→mermaid, `.dot`/`.gv`→graphviz, `.d2`→d2, `.html`→web). Use `--renderer app --window-id N` for a live macOS window.
    - Add `--no-manifest` when rendering into a directory you want kept clean (e.g. `--out docs/diagrams`) — it skips writing `manifest.json` there.
 2. **Read the printed `PNG:` path** with the Read tool — actually look at it.
