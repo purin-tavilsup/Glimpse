@@ -21,6 +21,13 @@ for f in "$TPL"/*.mmd "$TPL"/*.d2; do
         *.mmd) have mmdc || { echo "skip  $name (mmdc not installed)"; continue; } ;;
     esac
 
+    # For D2 templates, also verify icon URLs resolve (D2 icons fail silently).
+    if [ "${f##*.}" = "d2" ] && ! "$ROOT/scripts/check-d2-icons.sh" "$f" >/dev/null 2>&1; then
+        echo "FAIL  $name (broken icon URL — run scripts/check-d2-icons.sh $f)"
+        fail=1
+        continue
+    fi
+
     out="$("$ROOT/scripts/glimpse" "$f" --name "check-${name//./-}" --out "$TMP" --no-manifest 2>&1 || true)"
     status="$(printf '%s\n' "$out" | sed -n 's/^Status:[[:space:]]*\([a-z]*\).*/\1/p')"
     warn="$(printf '%s\n' "$out" | sed -n 's/^Warnings:[[:space:]]*//p')"

@@ -45,8 +45,10 @@ derived from Pond's reference diagrams, rendering + verifying via glimpse.
 1. **diagram-design proof + reach:** add an *ambiguous-routing* test (the one real gap in
    proving the router beats a capable base model); run the deferred *description-
    optimization* loop for trigger accuracy (20 trigger-eval queries already drafted).
-2. **D2 icon cheat-sheet** in `reference.md` — only a few GCP/GitHub URLs verified; AWS/
-   Azure would hit the silent-fail problem.
+2. ~~D2 silent-fail icons~~ — ✅ **DONE (accuracy push).** `scripts/check-d2-icons.sh`
+   HTTP-checks every `icon:` URL deterministically (a dead URL renders nothing in D2 with
+   no error); wired into the diagram-design skill flow + the template smoke test. Remaining
+   nice-to-have: broaden the verified-URL examples in `reference.md` to AWS/Azure.
 3. ~~`app` renderer (live-window screenshot)~~ — ✅ **DONE (autonomy push).** `WindowInfo`
    + pure `WindowSelector` + `MacWindowFinder` (CoreGraphics P/Invoke). CLI:
    `--window "Name"` (autonomous frontmost-window lookup by app name, `--title` to
