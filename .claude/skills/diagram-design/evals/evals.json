@@ -1,0 +1,33 @@
+{
+  "skill_name": "diagram-design",
+  "evals": [
+    {
+      "id": 0,
+      "name": "auth-flow-sequence",
+      "prompt": "Draw me the authentication flow for our login. The user hits the web app, it redirects to our OAuth provider, the user logs in, we get a code back, exchange it for a token, then call the API with the token. Show the back-and-forth.",
+      "expected_output": "A SEQUENCE diagram (participants + messages over time), not an architecture box diagram. Solid call / dashed return, labeled messages.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "order-architecture-layered",
+      "prompt": "I need an architecture diagram of our order service: a React frontend, a .NET API, a Postgres database, and it publishes events to a message queue. Show how the layers fit together.",
+      "expected_output": "A layered architecture diagram (C4 container-ish): soft-fill labeled layers/zones, rounded component boxes, a cylinder for Postgres, labeled edges. Not a sequence/flow.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "order-lifecycle-state",
+      "prompt": "Diagram the lifecycle of an order in our system, from created through paid, shipped, delivered, and also cancelled.",
+      "expected_output": "A state machine (stateDiagram-v2): states with [*] initial/final, labeled transitions for the events. Not a flowchart or architecture diagram.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "gcp-github-cicd-cloud",
+      "prompt": "Make me a deployment diagram with the actual service logos: GitHub Actions builds and pushes our image to Google Artifact Registry, then deploys to Cloud Run, which reads from Cloud SQL and publishes to Pub/Sub.",
+      "expected_output": "An icon-cloud architecture diagram (D2) with real GCP + GitHub icons, nested container(s), labeled edges. Icons must actually appear (not silently missing).",
+      "files": []
+    }
+  ]
+}
