@@ -4,4 +4,8 @@
     <ProjectReference Include="..\Glimpse.Abstractions\Glimpse.Abstractions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" />
+  </ItemGroup>
+
 </Project>
