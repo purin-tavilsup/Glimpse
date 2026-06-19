@@ -6,7 +6,7 @@ title: "Order Service — Container View (C4 L2)"
 %% subgraphs, rounded component boxes, [(cylinders)] for datastores, [[queues]] for infra,
 %% black solid edges = call, red dashed edge = return. Rename for the real system.
 flowchart TB
-    user([User]):::actor
+    user@{ img: "data:image/png;base64,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", label: "User", w: 64, h: 64, pos: "b", constraint: "on" }
 
     subgraph PL [Presentation Layer]
         web[Web App<br/>React SPA]:::ui
@@ -27,11 +27,13 @@ flowchart TB
     api -->|publish OrderCreated| mq
     api -.->|201 Created| web
 
-    classDef actor fill:#ede9fe,stroke:#6d28d9,color:#2e1065;
     classDef ui fill:#e0e7ff,stroke:#4338ca,color:#1e1b4b;
     classDef svc fill:#dcfce7,stroke:#15803d,color:#14532d;
     classDef data fill:#dcfce7,stroke:#15803d,color:#14532d;
     classDef infra fill:#fef9c3,stroke:#a16207,color:#422006;
+
+    %% user is an image node — make its box invisible so only the icon shows
+    style user fill:transparent,stroke:transparent
 
     style PL fill:#fdf6ec,stroke:#e7d9c4,color:#5b4636
     style AL fill:#fdf6ec,stroke:#e7d9c4,color:#5b4636

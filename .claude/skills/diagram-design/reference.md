@@ -86,6 +86,25 @@ Principle: low-saturation fills, darker same-hue stroke and text. Color should e
 - Using a flowchart for something that's really a sequence (interactions between parties)
   or a state machine (lifecycle) — re-route to the right type.
 
+## Actor / user icon
+
+A clean filled-person icon reads better than a plain box or pill for the human actor. A
+person icon is bundled at `assets/user.png` (the source of truth).
+
+- **mermaid** — embed it as a **data URI** in an image node (a file path won't resolve in
+  mermaid-cli; a data URI is self-contained and portable):
+  ```
+  user@{ img: "data:image/png;base64,…", label: "User", w: 64, h: 64, pos: "b", constraint: "on" }
+  style user fill:transparent,stroke:transparent
+  ```
+  `constraint: "on"` keeps the aspect ratio; the transparent `style` hides the node box so
+  only the icon shows. The ready-made data URI is in `templates/layered.mmd` — copy it. To
+  regenerate from the asset (kept small): `sips -z 64 64 assets/user.png --out /tmp/u.png`
+  then `base64 -i /tmp/u.png`.
+- **D2** — `user: User { shape: image; icon: <absolute path to assets/user.png, or a data URI> }`.
+- **Sequence diagrams** keep the standard `actor` keyword (stick figure) — mermaid
+  `sequenceDiagram` can't use a custom actor image, and the stick figure is conventional.
+
 ## Renderer notes
 
 **mermaid**
