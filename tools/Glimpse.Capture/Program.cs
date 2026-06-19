@@ -16,6 +16,61 @@ if (options.ListWindows)
     return 0;
 }
 
+if (options.CheckIcons)
+{
+    if (options.Source is null)
+    {
+        Console.Error.WriteLine("--check-icons requires a .d2 file path.");
+        return 2;
+    }
+    if (!File.Exists(options.Source))
+    {
+        Console.Error.WriteLine($"not found: {options.Source}");
+        return 2;
+    }
+
+    var urls = D2IconCheck.ExtractIconUrls(File.ReadAllText(options.Source));
+    if (urls.Count == 0)
+    {
+        Console.WriteLine($"No icon: URLs in {options.Source} (nothing to check).");
+        return 0;
+    }
+
+    using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+    var anyFailed = false;
+    foreach (var url in urls)
+    {
+        int code;
+        try
+        {
+            using var resp = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+            code = (int)resp.StatusCode;
+        }
+        catch
+        {
+            code = 0;
+        }
+
+        if (code == 200)
+        {
+            Console.WriteLine($"ok   {code}  {url}");
+        }
+        else
+        {
+            Console.WriteLine($"BAD  {code}  {url}");
+            anyFailed = true;
+        }
+    }
+
+    if (anyFailed)
+    {
+        Console.Error.WriteLine("Broken icon URL(s) — fix them or those icons will silently vanish.");
+        return 1;
+    }
+    Console.WriteLine("All icon URLs resolve.");
+    return 0;
+}
+
 var outDir = options.OutDir ?? Path.Combine(OutputLocator.Resolve(), "glimpse");
 var writer = new SnapshotWriter(outDir);
 var outputPath = writer.PngPath(options.Name);
