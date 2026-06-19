@@ -47,9 +47,12 @@ derived from Pond's reference diagrams, rendering + verifying via glimpse.
    optimization* loop for trigger accuracy (20 trigger-eval queries already drafted).
 2. **D2 icon cheat-sheet** in `reference.md` — only a few GCP/GitHub URLs verified; AWS/
    Azure would hit the silent-fail problem.
-3. **`app` renderer (live-window screenshot)** — fully spec'd
-   (`docs/superpowers/specs/2026-06-16-glimpse-live-screenshot-skill-design.md`) but
-   never built (only `--window-id`, no window-name→id lookup). Implement or formally shelve.
+3. ~~`app` renderer (live-window screenshot)~~ — ✅ **DONE (autonomy push).** `WindowInfo`
+   + pure `WindowSelector` + `MacWindowFinder` (CoreGraphics P/Invoke). CLI:
+   `--window "Name"` (autonomous frontmost-window lookup by app name, `--title` to
+   disambiguate, full-screen fallback), `--list-windows` (discovery), still `--window-id`.
+   Verified live (captured a real Chrome window by name). Screen-Recording permission
+   caveat documented in the glimpse skill.
 4. **Glimpse review minors** (non-blocking): JSON renderer-override merge path untested;
    no integration test over `Program.cs` manifest-write path.
 5. Polish: dynamic-view (numbered-badge) exemplar; cloud template labels GCP "Container

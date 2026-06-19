@@ -44,6 +44,24 @@ public class CaptureOptionsTests
     }
 
     [Fact]
+    public void Parse_WithWindowAndTitle_ShouldBindAndSlugDefaultName()
+    {
+        var options = CaptureOptions.Parse(["--renderer", "app", "--window", "Google Chrome", "--title", "Coda"]);
+
+        Assert.Equal("Google Chrome", options.Window);
+        Assert.Equal("Coda", options.Title);
+        Assert.Equal("google-chrome", options.Name);
+    }
+
+    [Fact]
+    public void Parse_WithListWindows_ShouldSetFlag()
+    {
+        var options = CaptureOptions.Parse(["--list-windows"]);
+
+        Assert.True(options.ListWindows);
+    }
+
+    [Fact]
     public void Parse_WithThemeAndRendererAndName_ShouldBind()
     {
         var options = CaptureOptions.Parse(

@@ -11,16 +11,20 @@ public sealed record CaptureOptions(
     int Height,
     SnapshotTheme Theme,
     int? WindowId,
+    string? Window,
+    string? Title,
     bool Prune,
-    bool NoManifest)
+    bool NoManifest,
+    bool ListWindows)
 {
     public static CaptureOptions Parse(string[] args)
     {
-        string? source = null, renderer = null, name = null, outDir = null;
+        string? source = null, renderer = null, name = null, outDir = null, window = null, title = null;
         int width = 1280, height = 800, windowId = 0;
         var theme = SnapshotTheme.Light;
         var prune = false;
         var noManifest = false;
+        var listWindows = false;
         var hasWindowId = false;
 
         for (var i = 0; i < args.Length; i++)
@@ -38,8 +42,11 @@ public sealed record CaptureOptions(
                         throw new ArgumentException("--window-id requires an integer.");
                     hasWindowId = true;
                     break;
+                case "--window": window = Next(args, ref i); break;
+                case "--title": title = Next(args, ref i); break;
                 case "--prune": prune = true; break;
                 case "--no-manifest": noManifest = true; break;
+                case "--list-windows": listWindows = true; break;
                 case "--size": (width, height) = SizeFor(Next(args, ref i)); break;
                 default:
                     if (arg.StartsWith('-'))
@@ -50,10 +57,20 @@ public sealed record CaptureOptions(
         }
 
         var resolvedName = name
-            ?? (source is not null ? Path.GetFileNameWithoutExtension(source) : renderer ?? "snapshot");
+            ?? (source is not null ? Path.GetFileNameWithoutExtension(source)
+                : window is not null ? Slug(window)
+                : renderer ?? "snapshot");
 
         return new CaptureOptions(source, renderer, resolvedName, outDir, width, height, theme,
-            hasWindowId ? windowId : null, prune, noManifest);
+            hasWindowId ? windowId : null, window, title, prune, noManifest, listWindows);
+    }
+
+    private static string Slug(string value)
+    {
+        var chars = value.ToLowerInvariant()
+            .Select(c => char.IsLetterOrDigit(c) ? c : '-')
+            .ToArray();
+        return new string(chars).Trim('-');
     }
 
     private static string Next(string[] args, ref int i)
