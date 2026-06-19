@@ -11,6 +11,7 @@ Render an artifact to a PNG, Read the PNG, judge it, improve the source, repeat.
 
 1. **Render:** `dotnet run --project tools/Glimpse.Capture -- <source> [--renderer NAME] [--name NAME] [--theme dark] [--size WxH]`
    - Renderer is inferred from extension (`.mmd`→mermaid, `.dot`/`.gv`→graphviz, `.d2`→d2, `.html`→web). Use `--renderer app --window-id N` for a live macOS window.
+   - Add `--no-manifest` when rendering into a directory you want kept clean (e.g. `--out docs/diagrams`) — it skips writing `manifest.json` there.
 2. **Read the printed `PNG:` path** with the Read tool — actually look at it.
 3. **Check the printed warnings.** `single-color-frame:*` or a non-zero exit means the render broke (missing font, bad source, blank output) — fix the pipeline before judging design.
 4. **Judge against intent:** layout, overlap, clipped/tofu text, legibility, does it communicate the thing.

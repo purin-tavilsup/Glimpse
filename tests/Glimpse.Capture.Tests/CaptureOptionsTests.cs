@@ -28,6 +28,22 @@ public class CaptureOptionsTests
     }
 
     [Fact]
+    public void Parse_WithoutNoManifestFlag_ShouldDefaultToFalse()
+    {
+        var options = CaptureOptions.Parse(["x.mmd"]);
+
+        Assert.False(options.NoManifest);
+    }
+
+    [Fact]
+    public void Parse_WithNoManifestFlag_ShouldBeTrue()
+    {
+        var options = CaptureOptions.Parse(["x.mmd", "--no-manifest"]);
+
+        Assert.True(options.NoManifest);
+    }
+
+    [Fact]
     public void Parse_WithThemeAndRendererAndName_ShouldBind()
     {
         var options = CaptureOptions.Parse(

@@ -56,6 +56,7 @@ Manifest: /…/.claude/tmp/ui-snapshots/glimpse/manifest.json
 | `--size WxH` | Render dimensions, e.g. `1280x800` |
 | `--window-id <n>` | Window id for the `app` renderer |
 | `--prune` | Delete stale PNGs from previous runs |
+| `--no-manifest` | Don't write `manifest.json` — handy for one-off renders into a folder you don't want cluttered (e.g. `docs/`) |
 
 **Exit codes:** `0` rendered clean · `1` rendered with warnings · `2` render failed.
 

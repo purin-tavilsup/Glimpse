@@ -41,13 +41,16 @@ catch (GlimpseRenderToolException ex)
     return 2;
 }
 
-var entry = new SceneEntry(
-    options.Name, options.Theme.ToString().ToLowerInvariant(), outputPath,
-    outcome.Width, outcome.Height, 1.0, outcome.Status, DateTimeOffset.UtcNow, outcome.Warnings);
+if (!options.NoManifest)
+{
+    var entry = new SceneEntry(
+        options.Name, options.Theme.ToString().ToLowerInvariant(), outputPath,
+        outcome.Width, outcome.Height, 1.0, outcome.Status, DateTimeOffset.UtcNow, outcome.Warnings);
 
-var manifest = ManifestMerge.Merge(
-    writer.ReadExisting(), [entry], [], Guid.NewGuid().ToString(), DateTimeOffset.UtcNow);
-writer.WriteManifest(manifest);
+    var manifest = ManifestMerge.Merge(
+        writer.ReadExisting(), [entry], [], Guid.NewGuid().ToString(), DateTimeOffset.UtcNow);
+    writer.WriteManifest(manifest);
+}
 
 if (options.Prune)
     writer.Prune(new HashSet<string> { options.Name });
@@ -56,6 +59,7 @@ Console.WriteLine($"PNG:      {outcome.OutputPath}");
 Console.WriteLine($"Status:   {outcome.Status} ({outcome.Width}x{outcome.Height})");
 if (outcome.Warnings.Count > 0)
     Console.WriteLine($"Warnings: {string.Join(", ", outcome.Warnings)}");
-Console.WriteLine($"Manifest: {Path.Combine(outDir, "manifest.json")}");
+if (!options.NoManifest)
+    Console.WriteLine($"Manifest: {Path.Combine(outDir, "manifest.json")}");
 
 return outcome.ExitCode;

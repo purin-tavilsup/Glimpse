@@ -11,7 +11,8 @@ public sealed record CaptureOptions(
     int Height,
     SnapshotTheme Theme,
     int? WindowId,
-    bool Prune)
+    bool Prune,
+    bool NoManifest)
 {
     public static CaptureOptions Parse(string[] args)
     {
@@ -19,6 +20,7 @@ public sealed record CaptureOptions(
         int width = 1280, height = 800, windowId = 0;
         var theme = SnapshotTheme.Light;
         var prune = false;
+        var noManifest = false;
         var hasWindowId = false;
 
         for (var i = 0; i < args.Length; i++)
@@ -37,6 +39,7 @@ public sealed record CaptureOptions(
                     hasWindowId = true;
                     break;
                 case "--prune": prune = true; break;
+                case "--no-manifest": noManifest = true; break;
                 case "--size": (width, height) = SizeFor(Next(args, ref i)); break;
                 default:
                     if (arg.StartsWith('-'))
@@ -50,7 +53,7 @@ public sealed record CaptureOptions(
             ?? (source is not null ? Path.GetFileNameWithoutExtension(source) : renderer ?? "snapshot");
 
         return new CaptureOptions(source, renderer, resolvedName, outDir, width, height, theme,
-            hasWindowId ? windowId : null, prune);
+            hasWindowId ? windowId : null, prune, noManifest);
     }
 
     private static string Next(string[] args, ref int i)
