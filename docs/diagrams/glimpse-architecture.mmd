@@ -1,0 +1,26 @@
+flowchart LR
+    A([Source<br/>.mmd / .dot / .html / live app]):::io
+
+    subgraph G [Glimpse harness · mechanical]
+        direction TB
+        B[RendererRegistry<br/>resolve] --> C[ToolLocator<br/>find tool on PATH]
+        C --> D[RenderCommandBuilder<br/>substitute placeholders]
+        D --> E[ProcessRunner<br/>run command]
+        E --> F[PngAnalysis<br/>blank / single-color]
+        F --> H[SnapshotWriter + ManifestMerge<br/>record]
+    end
+
+    A --> B
+    H --> P([PNG]):::io
+
+    subgraph L [Agent · judgment loop]
+        direction TB
+        R[Read the PNG] --> Q{Meets<br/>intent?}
+        Q -->|yes| J([Done]):::done
+    end
+
+    P --> R
+    Q -->|no: edit source| A
+
+    classDef io fill:#e8eefc,stroke:#4666c4,color:#1a2a52;
+    classDef done fill:#d8f5dd,stroke:#2f9e44,color:#143a1f;
