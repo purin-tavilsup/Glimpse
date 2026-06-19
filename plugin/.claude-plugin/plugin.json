@@ -1,0 +1,6 @@
+{
+  "name": "glimpse",
+  "description": "Render any UI or diagram to a PNG and design clear diagrams — the glimpse render-loop CLI plus the diagram-design skill.",
+  "version": "0.1.0",
+  "author": { "name": "Purin Tavilsup" }
+}
