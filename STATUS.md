@@ -36,10 +36,10 @@ derived from Pond's reference diagrams, rendering + verifying via glimpse.
   subagent spec review → skill-creator build.
 
 ### Dev ergonomics (just added)
-- `scripts/glimpse` — fast wrapper (runs the built DLL, skips per-call `dotnet run`
-  rebuild). `GLIMPSE_REBUILD=1` forces a rebuild.
-- `scripts/check-diagram-templates.sh` — smoke test: renders all 6 templates, fails on
-  any non-clean render (guards against mermaid/D2 upgrades). All 6 pass (~4s).
+- `plugin/bin/glimpse` — CLI wrapper (runs the built DLL, lazy-builds if missing; no
+  rebuild env var — delete the DLL to force a fresh build).
+- `scripts/check-diagram-templates.sh` — smoke test: renders all 6 templates via
+  `plugin/bin/glimpse` (incl. `--check-icons` for D2 icons), fails on any non-clean render.
 
 ## Deferred / next actions
 1. **diagram-design proof + reach:**
@@ -67,6 +67,23 @@ derived from Pond's reference diagrams, rendering + verifying via glimpse.
    no integration test over `Program.cs` manifest-write path.
 5. Polish: dynamic-view (numbered-badge) exemplar; cloud template labels GCP "Container
    Registry" icon as "Artifact Registry" (closest match).
+6. ~~Distribution~~ — ✅ **DONE + verified from Recorder.** Option B (skills-directory plugin
+   `plugin/`, symlinked into `~/.claude/skills/glimpse` via `scripts/install.sh`, no
+   marketplace). `glimpse --check-icons` folds in the old script. **Verified from
+   `~/dev/Recorder`:** `glimpse` on PATH, a diagram rendered to a real PNG, and both skills
+   (`glimpse:glimpse`, `glimpse:diagram-design`) available there. macOS-only. Spec/plan:
+   `docs/superpowers/{specs,plans}/2026-06-19-glimpse-distribution*`. (Live `--window
+   "Recorder"` capture not run — needs the app running + Screen-Recording permission.)
+7. **🔭 Cross-platform (Windows) — come back later.** Port `ToolLocator` (`which`→`where`),
+   add a Windows `glimpse` entrypoint (real binary, not the bash `bin/glimpse` wrapper),
+   fix the Chrome path; live-app capture would need a Windows window-finder + capture.
+   Diagram rendering is the near-term win (mermaid/d2 are already cross-platform). Folds in
+   with item 8.
+8. **🔭 Option C — publish as a marketplace plugin (later, when stable + sharing).** Add a
+   `marketplace.json` so anyone can `/plugin marketplace add purin-tavilsup/Glimpse` →
+   `/plugin install glimpse`. Needs a *pre-built, committed* cross-platform binary in the
+   plugin `bin/` (marketplace can't build .NET) — same slot the Windows port (item 7)
+   fills, so do them together. Detail in the distribution spec §9.
 
 ## Environment notes
 - `mmdc` (mermaid-cli) + `d2` (`brew install d2`) installed. Chrome present for `web`.

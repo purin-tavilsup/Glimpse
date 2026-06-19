@@ -120,16 +120,12 @@ Don't judge a diagram from its source — render and look. The `glimpse` skill t
 source file into a PNG you can Read:
 
 ```
-# Fast wrapper (preferred — runs the built CLI directly, no rebuild each call):
-./scripts/glimpse <file>.mmd --name <name>     # mermaid: sequence/state/ER/flowchart/layered
-./scripts/glimpse <file>.d2  --name <name>     # D2 icon-cloud (renderer inferred from .d2)
-
-# Equivalent, slower (rebuilds every call):
-dotnet run --project tools/Glimpse.Capture -- <file>.mmd --name <name>
+glimpse <file>.mmd --name <name>     # mermaid: sequence/state/ER/flowchart/layered
+glimpse <file>.d2  --name <name>     # D2 icon-cloud (renderer inferred from .d2)
 ```
 
 Read the printed `PNG:` path, judge it, iterate. When saving reference exemplars into this
-skill's `examples/` dir, add `--out .claude/skills/diagram-design/examples --no-manifest`
+skill's `examples/` dir, add `--out plugin/skills/diagram-design/examples --no-manifest`
 to keep that dir clean.
 
 ## Requirements
@@ -138,6 +134,6 @@ to keep that dir clean.
 - **D2** (`brew install d2`) only for icon-cloud architecture. If D2 is missing, tell the
   user, then fall back to `layered.mmd` (no icons). **D2 icons fail silently** — a wrong
   `icon:` URL renders nothing with no error. So for any `.d2` with icons:
-  **before rendering, run `./scripts/check-d2-icons.sh <file>.d2`** — it HTTP-checks every
+  **before rendering, run `glimpse --check-icons <file>.d2`** — it HTTP-checks every
   icon URL and fails on any that don't resolve (deterministic). Then still Read the PNG to
   confirm the icons appear.

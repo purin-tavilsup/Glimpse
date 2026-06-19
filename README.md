@@ -62,7 +62,7 @@ Manifest: /…/.claude/tmp/ui-snapshots/glimpse/manifest.json
 
 ## The agent loop
 
-Glimpse ships a [`glimpse` skill](.claude/skills/glimpse/SKILL.md) that packages the loop for coding agents:
+Glimpse ships a [`glimpse` skill](plugin/skills/glimpse/SKILL.md) that packages the loop for coding agents:
 
 1. **Render** the source to a PNG.
 2. **Read** the PNG — actually look at it.
