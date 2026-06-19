@@ -99,4 +99,13 @@ public class CaptureOptionsTests
     {
         Assert.Throws<ArgumentException>(() => CaptureOptions.Parse(["x.mmd", "--size", "0x0"]));
     }
+
+    [Fact]
+    public void Parse_WithCheckIcons_ShouldSetFlagAndKeepSource()
+    {
+        var options = CaptureOptions.Parse(["diagram.d2", "--check-icons"]);
+
+        Assert.True(options.CheckIcons);
+        Assert.Equal("diagram.d2", options.Source);
+    }
 }

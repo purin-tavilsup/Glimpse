@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Glimpse CLI on PATH (via the plugin's bin/). Resolves this script's REAL location
+# through the install symlink — without `readlink -f` (unsupported on macOS) — then runs
+# the in-repo built DLL so it's always current. Builds once if the DLL is missing.
+set -euo pipefail
+
+src="${BASH_SOURCE[0]}"
+while [ -L "$src" ]; do
+    dir="$(cd -P "$(dirname "$src")" && pwd)"
+    src="$(readlink "$src")"
+    [[ $src != /* ]] && src="$dir/$src"
+done
+bin_dir="$(cd -P "$(dirname "$src")" && pwd)"
+repo="$(cd "$bin_dir/../.." && pwd)"   # plugin/bin -> plugin -> repo
+dll="$repo/tools/Glimpse.Capture/bin/Debug/net10.0/Glimpse.Capture.dll"
+
+[ -f "$dll" ] || dotnet build "$repo/tools/Glimpse.Capture/Glimpse.Capture.csproj" -v quiet >&2
+exec dotnet "$dll" "$@"
