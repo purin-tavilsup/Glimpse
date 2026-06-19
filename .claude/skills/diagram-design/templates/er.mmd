@@ -1,0 +1,33 @@
+---
+title: "Orders — Data Model"
+---
+%% TEMPLATE: entity-relationship (data model) — mermaid erDiagram (frontmatter title must
+%% be line 1). Label every relationship and show cardinality. For many-to-many, introduce a
+%% junction entity (here ORDER_ITEM joins ORDER and PRODUCT). Note: erDiagram auto-lays
+%% out — do NOT add a TB/LR direction.
+erDiagram
+    CUSTOMER ||--o{ ORDER : places
+    ORDER ||--|{ ORDER_ITEM : contains
+    PRODUCT ||--o{ ORDER_ITEM : "appears in"
+
+    CUSTOMER {
+        uuid id PK
+        string email
+        string name
+    }
+    ORDER {
+        uuid id PK
+        uuid customer_id FK
+        string status
+        timestamp created_at
+    }
+    ORDER_ITEM {
+        uuid order_id FK
+        uuid product_id FK
+        int quantity
+    }
+    PRODUCT {
+        uuid id PK
+        string name
+        decimal price
+    }

@@ -1,0 +1,45 @@
+# TEMPLATE: icon-cloud architecture — D2 with vendor icons (GCP, GitHub, AWS, Azure).
+# Group services into containers, use shape:image + icon: URL per service, label every edge.
+# IMPORTANT: D2 icons fail silently — if an icon URL is wrong it renders nothing with no
+# error. Verify each URL resolves (HTTP 200) before using, and Read the PNG to confirm the
+# icons actually appear. Icon catalog: https://icons.terrastruct.com
+# Render: dotnet run --project tools/Glimpse.Capture -- cloud.d2 --name <name>
+
+direction: right
+
+title: CI/CD Deploy: GCP + GitHub {
+  near: top-center
+  shape: text
+  style: {font-size: 30; bold: true}
+}
+
+ci: CI/CD {
+  gh: GitHub Actions {
+    shape: image
+    icon: https://icons.terrastruct.com/dev%2Fgithub.svg
+  }
+}
+
+gcp: Google Cloud {
+  ar: Artifact Registry {
+    shape: image
+    icon: https://icons.terrastruct.com/gcp%2FProducts%20and%20services%2FDeveloper%20Tools%2FContainer%20Registry.svg
+  }
+  run: Cloud Run {
+    shape: image
+    icon: https://icons.terrastruct.com/gcp%2FProducts%20and%20services%2FCompute%2FCloud%20Run.svg
+  }
+  sql: Cloud SQL {
+    shape: image
+    icon: https://icons.terrastruct.com/gcp%2FProducts%20and%20services%2FDatabases%2FCloud%20SQL.svg
+  }
+  ps: Pub/Sub {
+    shape: image
+    icon: https://icons.terrastruct.com/gcp%2FProducts%20and%20services%2FData%20Analytics%2FCloud%20PubSub.svg
+  }
+}
+
+ci.gh -> gcp.ar: build & push image
+gcp.ar -> gcp.run: deploy
+gcp.run -> gcp.sql: read / write
+gcp.run -> gcp.ps: publish events
