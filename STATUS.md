@@ -36,10 +36,10 @@ derived from Pond's reference diagrams, rendering + verifying via glimpse.
   subagent spec review → skill-creator build.
 
 ### Dev ergonomics (just added)
-- `scripts/glimpse` — fast wrapper (runs the built DLL, skips per-call `dotnet run`
-  rebuild). `GLIMPSE_REBUILD=1` forces a rebuild.
-- `scripts/check-diagram-templates.sh` — smoke test: renders all 6 templates, fails on
-  any non-clean render (guards against mermaid/D2 upgrades). All 6 pass (~4s).
+- `plugin/bin/glimpse` — CLI wrapper (runs the built DLL, lazy-builds if missing; no
+  rebuild env var — delete the DLL to force a fresh build).
+- `scripts/check-diagram-templates.sh` — smoke test: renders all 6 templates via
+  `plugin/bin/glimpse` (incl. `--check-icons` for D2 icons), fails on any non-clean render.
 
 ## Deferred / next actions
 1. **diagram-design proof + reach:**
