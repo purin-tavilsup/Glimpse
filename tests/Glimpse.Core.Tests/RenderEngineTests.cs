@@ -85,6 +85,7 @@ public class RenderEngineTests
 
         Assert.Equal("failed", outcome.Status);
         Assert.Equal(2, outcome.ExitCode);
+        Assert.Contains(outcome.Warnings, w => w.StartsWith("render-failed:"));
     }
 
     [Fact]
