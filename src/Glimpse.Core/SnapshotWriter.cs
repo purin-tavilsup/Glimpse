@@ -21,6 +21,24 @@ public sealed class SnapshotWriter(string outputDir)
         return name;
     }
 
+    /// <summary>Stable path for a named target — re-renders overwrite it (no accumulation).</summary>
+    public string PngPath(string name)
+    {
+        Directory.CreateDirectory(outputDir);
+        return Path.Combine(outputDir, $"{name}.png");
+    }
+
+    /// <summary>Deletes PNGs in the output dir whose base name is not in <paramref name="keepNames"/>.</summary>
+    public void Prune(ISet<string> keepNames)
+    {
+        if (!Directory.Exists(outputDir))
+            return;
+
+        foreach (var file in Directory.EnumerateFiles(outputDir, "*.png"))
+            if (!keepNames.Contains(Path.GetFileNameWithoutExtension(file)))
+                File.Delete(file);
+    }
+
     public Manifest? ReadExisting()
         => File.Exists(ManifestPath)
             ? JsonSerializer.Deserialize<Manifest>(File.ReadAllText(ManifestPath), JsonOptions)
