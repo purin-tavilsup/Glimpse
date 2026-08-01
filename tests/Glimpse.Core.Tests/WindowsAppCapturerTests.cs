@@ -30,6 +30,11 @@ public class WindowsAppCapturerTests
         Assert.NotNull(outcome);
         Assert.Equal("ok", outcome.Status);
         Assert.True(outcome.Width > 0 && outcome.Height > 0);
+        // Closes trap 1 (all-black PrintWindow) and the alpha-transparency risk in one stroke:
+        // a black or fully transparent frame trips PngAnalysis's single-color-frame warning.
+        // BlitFromScreen is the only path exercised here (there is no window id), so this is
+        // the one automated guard on the real screen-capture pixels, not just the encoder.
+        Assert.Empty(outcome.Warnings);
         File.Delete(path);
     }
 
@@ -40,6 +45,23 @@ public class WindowsAppCapturerTests
         var path = TempPng();
 
         var outcome = await CaptureOrNull(path, windowId: 999_999_999L);
+
+        Assert.NotNull(outcome);
+        Assert.Equal("failed", outcome.Status);
+        Assert.Equal(2, outcome.ExitCode);
+    }
+
+    [SkippableFact]
+    public async Task CaptureAsync_OnWindowsWithAnUnwritableOutputPath_ShouldFailNotThrow()
+    {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Windows-only capture.");
+        // An existing directory, not a file: File.WriteAllBytes throws UnauthorizedAccessException
+        // trying to open it for writing. Deterministic without needing ACL changes on this
+        // machine. This exercises the broad catch in CaptureAsync -- the specific
+        // GlimpseCaptureException catch does not cover this failure, only the general one does.
+        var unwritablePath = Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar);
+
+        var outcome = await CaptureOrNull(unwritablePath, windowId: null);
 
         Assert.NotNull(outcome);
         Assert.Equal("failed", outcome.Status);
