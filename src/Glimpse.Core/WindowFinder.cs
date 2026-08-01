@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
@@ -237,7 +239,7 @@ public sealed class WindowsWindowFinder : IWindowFinder
 
         try
         {
-            using var process = System.Diagnostics.Process.GetProcessById((int)processId);
+            using var process = Process.GetProcessById((int)processId);
             return process.ProcessName;
         }
         catch (ArgumentException)
@@ -247,6 +249,10 @@ public sealed class WindowsWindowFinder : IWindowFinder
         catch (InvalidOperationException)
         {
             return null;
+        }
+        catch (Win32Exception)
+        {
+            return null; // protected or inaccessible process (PPL, or elevated + access denied)
         }
     }
 
