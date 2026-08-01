@@ -1,4 +1,3 @@
-using System.Runtime.Versioning;
 using Glimpse.Abstractions;
 using Glimpse.Core;
 using Xunit;
@@ -7,22 +6,7 @@ namespace Glimpse.Core.Tests;
 
 public class AppCapturerTests
 {
-    private sealed class RecordingRunner(int exitCode) : IProcessRunner
-    {
-        public List<string> LastArgs { get; } = [];
-
-        public Task<ProcessResult> RunAsync(string executable, IReadOnlyList<string> args)
-        {
-            LastArgs.Clear();
-            LastArgs.AddRange(args);
-            return Task.FromResult(new ProcessResult(exitCode, exitCode == 0 ? "" : "boom"));
-        }
-    }
-
     [Fact]
-    [SupportedOSPlatform("macos")] // CA1416 guard: FullScreenSpec is plain data (no native
-                                    // calls), so it runs fine cross-platform; this just tells
-                                    // the analyzer the call site matches MacAppCapturer's attribute.
     public void FullScreenSpec_ShouldMatchTheArgsShippedBeforeTheRefactor()
     {
         // Program.cs built ["-x", "{out}"] inline. Pinning it here is what makes this
