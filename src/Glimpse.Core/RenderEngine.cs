@@ -15,6 +15,24 @@ public sealed record RenderOutcome(
     int Height,
     IReadOnlyList<string> Warnings);
 
+/// <summary>The shared tail of every render path: a written file becomes an analysed outcome.
+/// Used by both <see cref="RenderEngine"/> (external tools) and <see cref="IAppCapturer"/>
+/// (in-process capture) so the two can never disagree about status or exit codes.</summary>
+public static class RenderOutcomes
+{
+    public static RenderOutcome From(string outputPath, bool succeeded, string standardError)
+    {
+        if (!succeeded || !File.Exists(outputPath))
+            return new RenderOutcome("failed", 2, outputPath, 0, 0,
+                [$"render-failed:{standardError.Trim()}"]);
+
+        var inspection = PngAnalysis.Inspect(outputPath);
+        var exitCode = inspection.Warnings.Count > 0 ? 1 : 0;
+        return new RenderOutcome("ok", exitCode, outputPath,
+            inspection.Width, inspection.Height, inspection.Warnings);
+    }
+}
+
 /// <summary>Resolve tool -> run command -> analyse PNG -> outcome. The whole pipeline, minus persistence.</summary>
 public sealed class RenderEngine(IProcessRunner runner)
 {
@@ -25,14 +43,6 @@ public sealed class RenderEngine(IProcessRunner runner)
 
         var command = RenderCommandBuilder.Build(spec, request, executable);
         var result = await runner.RunAsync(command.Executable, command.Args);
-
-        if (result.ExitCode != 0 || !File.Exists(request.OutputPath))
-            return new RenderOutcome("failed", 2, request.OutputPath, 0, 0,
-                [$"render-failed:{result.StdErr.Trim()}"]);
-
-        var inspection = PngAnalysis.Inspect(request.OutputPath);
-        var exitCode = inspection.Warnings.Count > 0 ? 1 : 0;
-        return new RenderOutcome("ok", exitCode, request.OutputPath,
-            inspection.Width, inspection.Height, inspection.Warnings);
+        return RenderOutcomes.From(request.OutputPath, result.ExitCode == 0, result.StdErr);
     }
 }
