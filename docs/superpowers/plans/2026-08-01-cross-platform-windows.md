@@ -832,7 +832,6 @@ public interface IAppCapturer
 }
 
 /// <summary>macOS capture via <c>screencapture</c>. Needs Screen Recording (TCC) permission.</summary>
-[SupportedOSPlatform("macos")]
 public sealed class MacAppCapturer(IProcessRunner runner) : IAppCapturer
 {
     /// <summary>Whole-screen args. Kept here (not in the registry) because the built-in
@@ -840,6 +839,10 @@ public sealed class MacAppCapturer(IProcessRunner runner) : IAppCapturer
     public static RendererSpec FullScreenSpec { get; } =
         new("app", "screencapture", ["-x", "{out}"], []);
 
+    // The platform attribute sits on the BEHAVIOUR, not the type: FullScreenSpec is a plain
+    // RendererSpec record with no interop, so attributing the whole class would force an
+    // untrue [SupportedOSPlatform("macos")] onto every test that merely reads that data.
+    [SupportedOSPlatform("macos")]
     public Task<RenderOutcome> CaptureAsync(RenderRequest request)
     {
         var spec = request.WindowId is null
@@ -914,13 +917,24 @@ namespace Glimpse.Core.Tests;
 
 public class WindowsWindowFinderTests
 {
+    /// <summary>
+    /// Enumerates on Windows, or returns null when this OS cannot.
+    /// The <c>if (OperatingSystem.IsWindows())</c> is not redundant with <c>Skip.IfNot</c>:
+    /// verified 2026-08-01 that CA1416 does NOT accept <c>Skip.IfNot</c> as a guard (it is an
+    /// ordinary method call the analyzer cannot reason about), and CA1416 is a build error
+    /// here. The real if-guard is the only form that compiles.
+    /// </summary>
+    private static IReadOnlyList<WindowInfo>? EnumerateOrNull()
+        => OperatingSystem.IsWindows() ? new WindowsWindowFinder().ListOnScreen() : null;
+
     [SkippableFact]
     public void ListOnScreen_OnWindows_ShouldFindAtLeastOneRealWindow()
     {
         Skip.IfNot(OperatingSystem.IsWindows(), "Windows-only window enumeration.");
 
-        var windows = new WindowsWindowFinder().ListOnScreen();
+        var windows = EnumerateOrNull();
 
+        Assert.NotNull(windows);
         Assert.NotEmpty(windows);
     }
 
@@ -929,7 +943,7 @@ public class WindowsWindowFinderTests
     {
         Skip.IfNot(OperatingSystem.IsWindows(), "Windows-only window enumeration.");
 
-        var selectable = new WindowsWindowFinder().ListOnScreen()
+        var selectable = (EnumerateOrNull() ?? [])
             .Where(w => w.OnScreen && w.Layer == 0 && w.Width >= 50 && w.Height >= 50)
             .ToList();
 
@@ -947,7 +961,7 @@ public class WindowsWindowFinderTests
     {
         Skip.IfNot(OperatingSystem.IsWindows(), "Windows-only window enumeration.");
 
-        var windows = new WindowsWindowFinder().ListOnScreen();
+        var windows = EnumerateOrNull() ?? [];
 
         Assert.Equal(windows.Count, windows.Select(w => w.WindowId).Distinct().Count());
     }
@@ -1200,14 +1214,18 @@ is what proves the mapping is genuinely reusable."
 The only component with no existing code to lean on. Both failure modes here produce a *plausible-looking but wrong* PNG rather than an error, so the fallback chain and the orientation test matter more than usual.
 
 **Files:**
+- Create: `src/Glimpse.Core/BgraPngEncoder.cs`
 - Modify: `src/Glimpse.Core/AppCapturer.cs` (append)
+- Create: `tests/Glimpse.Core.Tests/BgraPngEncoderTests.cs`
 - Create: `tests/Glimpse.Core.Tests/WindowsAppCapturerTests.cs`
 
 **Interfaces:**
 - Consumes: `IAppCapturer`, `RenderOutcomes.From` (Task 4); `RenderRequest` with `long? WindowId` (Task 3)
 - Produces:
+  - `BgraPngEncoder.Write(byte[] bgraBuffer, int width, int height, string outputPath)` — `public static`, **no platform attribute**
   - `WindowsAppCapturer()` implementing `IAppCapturer`
-  - `WindowsAppCapturer.EncodePng(byte[] bgraBuffer, int width, int height, string outputPath)` — `public static`, so the encode is testable without a real window
+
+**Why the encoder is its own type.** Encoding BGRA bytes to PNG is pure SkiaSharp with no interop, so it is genuinely cross-platform and must run on macOS CI too — that is the one piece of genuinely new image code, and the platform this repo cannot test locally is exactly where it needs proving. Keeping it inside a `[SupportedOSPlatform("windows")]` class would force an untrue attribute onto all five encode tests (C# cannot un-attribute a member of an attributed type), and attributing `WindowsAppCapturer`'s seven native members individually instead would be noise. A separate unattributed type gets both: `WindowsAppCapturer` keeps its class-level attribute, and the encoder is freely testable everywhere.
 
 **Two silent-failure traps** (both from the spec):
 1. `PrintWindow` **must** pass `PW_RENDERFULLCONTENT` (`0x2`). Without it, DWM-composited windows — WPF, Chrome, Avalonia, i.e. exactly what Glimpse exists to screenshot — capture as solid black.
@@ -1215,7 +1233,7 @@ The only component with no existing code to lean on. Both failure modes here pro
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `tests/Glimpse.Core.Tests/WindowsAppCapturerTests.cs`:
+Create **two** test files. First `tests/Glimpse.Core.Tests/BgraPngEncoderTests.cs` — these are plain `[Fact]`s with **no guard and no platform attribute**, so they run on macOS CI too:
 
 ```csharp
 using Glimpse.Core;
@@ -1223,7 +1241,7 @@ using Xunit;
 
 namespace Glimpse.Core.Tests;
 
-public class WindowsAppCapturerTests
+public class BgraPngEncoderTests
 {
     private static string TempPng() => Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
 
@@ -1252,11 +1270,11 @@ public class WindowsAppCapturerTests
     }
 
     [Fact]
-    public void EncodePng_ShouldPreserveDimensions()
+    public void Write_ShouldPreserveDimensions()
     {
         var path = TempPng();
 
-        WindowsAppCapturer.EncodePng(TwoToneBgra(24, 16), 24, 16, path);
+        BgraPngEncoder.Write(TwoToneBgra(24, 16), 24, 16, path);
 
         var inspection = PngAnalysis.Inspect(path);
         Assert.Equal(24, inspection.Width);
@@ -1265,23 +1283,23 @@ public class WindowsAppCapturerTests
     }
 
     [Fact]
-    public void EncodePng_WithVariedPixels_ShouldNotBeFlaggedSingleColor()
+    public void Write_WithVariedPixels_ShouldNotBeFlaggedSingleColor()
     {
         var path = TempPng();
 
-        WindowsAppCapturer.EncodePng(TwoToneBgra(32, 32), 32, 32, path);
+        BgraPngEncoder.Write(TwoToneBgra(32, 32), 32, 32, path);
 
         Assert.Empty(PngAnalysis.Inspect(path).Warnings);
         File.Delete(path);
     }
 
     [Fact]
-    public void EncodePng_WithUniformPixels_ShouldBeFlaggedSingleColor()
+    public void Write_WithUniformPixels_ShouldBeFlaggedSingleColor()
     {
         // This is the safety net that catches a black PrintWindow result.
         var path = TempPng();
 
-        WindowsAppCapturer.EncodePng(UniformBgra(32, 32), 32, 32, path);
+        BgraPngEncoder.Write(UniformBgra(32, 32), 32, 32, path);
 
         Assert.Contains(PngAnalysis.Inspect(path).Warnings,
             w => w.StartsWith("single-color-frame:"));
@@ -1289,13 +1307,13 @@ public class WindowsAppCapturerTests
     }
 
     [Fact]
-    public void EncodePng_ShouldWriteRowsTopDownNotFlipped()
+    public void Write_ShouldWriteRowsTopDownNotFlipped()
     {
-        // The DIB is created with a negative biHeight for top-down rows. If that sign is
-        // wrong the image is vertically flipped -- which looks like a rendering bug, so
-        // pin the orientation explicitly: row 0 is red, the last row is blue.
+        // WindowsAppCapturer creates its DIB with a negative biHeight for top-down rows. If
+        // that sign is wrong the image is vertically flipped -- which looks like a rendering
+        // bug, so pin the orientation here: row 0 is red, the last row is blue.
         var path = TempPng();
-        WindowsAppCapturer.EncodePng(TwoToneBgra(8, 8), 8, 8, path);
+        BgraPngEncoder.Write(TwoToneBgra(8, 8), 8, 8, path);
 
         using var decoded = SkiaSharp.SKBitmap.Decode(File.ReadAllBytes(path));
 
@@ -1306,15 +1324,62 @@ public class WindowsAppCapturerTests
         File.Delete(path);
     }
 
+    [Fact]
+    public void Write_WithABareFilename_ShouldNotThrow()
+    {
+        // Path.GetDirectoryName returns "" for a bare filename, and Directory.CreateDirectory("")
+        // throws -- so the encoder must skip the create in that case.
+        var previous = Directory.GetCurrentDirectory();
+        Directory.SetCurrentDirectory(Path.GetTempPath());
+        var name = $"{Guid.NewGuid():N}.png";
+        try
+        {
+            BgraPngEncoder.Write(TwoToneBgra(4, 4), 4, 4, name);
+
+            Assert.True(File.Exists(name));
+            File.Delete(name);
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(previous);
+        }
+    }
+}
+```
+
+Then `tests/Glimpse.Core.Tests/WindowsAppCapturerTests.cs` — the two real captures. Note the `if (OperatingSystem.IsWindows())` is **not** redundant with `Skip.IfNot`: verified 2026-08-01 that CA1416 does not accept `Skip.IfNot` as a guard, and CA1416 is a build error here.
+
+```csharp
+using Glimpse.Abstractions;
+using Glimpse.Core;
+using Xunit;
+
+namespace Glimpse.Core.Tests;
+
+public class WindowsAppCapturerTests
+{
+    private static string TempPng() => Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+
+    /// <summary>Captures on Windows, or returns null when this OS cannot. The real if-guard
+    /// is what satisfies CA1416; Skip.IfNot is an ordinary call the analyzer cannot read.</summary>
+    private static async Task<RenderOutcome?> CaptureOrNull(string path, long? windowId)
+    {
+        if (!OperatingSystem.IsWindows())
+            return null;
+
+        return await new WindowsAppCapturer().CaptureAsync(
+            new RenderRequest("", path, 1280, 800, SnapshotTheme.Light, windowId));
+    }
+
     [SkippableFact]
     public async Task CaptureAsync_OnWindowsForFullScreen_ShouldProduceANonBlankPng()
     {
         Skip.IfNot(OperatingSystem.IsWindows(), "Windows-only capture.");
         var path = TempPng();
 
-        var outcome = await new WindowsAppCapturer().CaptureAsync(
-            new RenderRequest("", path, 1280, 800, Glimpse.Abstractions.SnapshotTheme.Light));
+        var outcome = await CaptureOrNull(path, windowId: null);
 
+        Assert.NotNull(outcome);
         Assert.Equal("ok", outcome.Status);
         Assert.True(outcome.Width > 0 && outcome.Height > 0);
         File.Delete(path);
@@ -1326,10 +1391,9 @@ public class WindowsAppCapturerTests
         Skip.IfNot(OperatingSystem.IsWindows(), "Windows-only capture.");
         var path = TempPng();
 
-        var outcome = await new WindowsAppCapturer().CaptureAsync(
-            new RenderRequest("", path, 1280, 800, Glimpse.Abstractions.SnapshotTheme.Light,
-                WindowId: 999_999_999L));
+        var outcome = await CaptureOrNull(path, windowId: 999_999_999L);
 
+        Assert.NotNull(outcome);
         Assert.Equal("failed", outcome.Status);
         Assert.Equal(2, outcome.ExitCode);
     }
@@ -1343,7 +1407,43 @@ Expected: compile error — `WindowsAppCapturer` does not exist.
 
 - [ ] **Step 3: Implement `WindowsAppCapturer`**
 
-Append to `src/Glimpse.Core/AppCapturer.cs`. Add `using System.Runtime.InteropServices;` and `using SkiaSharp;` at the top of the file.
+First create `src/Glimpse.Core/BgraPngEncoder.cs` — pure SkiaSharp, no interop, deliberately **not** platform-attributed so it runs on macOS CI too:
+
+```csharp
+using System.Runtime.InteropServices;
+using SkiaSharp;
+
+namespace Glimpse.Core;
+
+/// <summary>
+/// Writes a raw BGRA pixel buffer to a PNG. Uses SkiaSharp, which <see cref="PngAnalysis"/>
+/// already decodes with — so encode and decode can never disagree about the format.
+/// Cross-platform on purpose: the Windows capturer produces the buffer, but nothing here
+/// touches Win32, so the encoder is testable on every OS.
+/// </summary>
+public static class BgraPngEncoder
+{
+    /// <summary><paramref name="bgraBuffer"/> must be top-down, 4 bytes per pixel.</summary>
+    public static void Write(byte[] bgraBuffer, int width, int height, string outputPath)
+    {
+        var info = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
+        using var bitmap = new SKBitmap(info);
+        Marshal.Copy(bgraBuffer, 0, bitmap.GetPixels(), bgraBuffer.Length);
+
+        using var image = SKImage.FromBitmap(bitmap);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+
+        // GetDirectoryName returns "" for a bare filename, and CreateDirectory("") throws.
+        var directory = Path.GetDirectoryName(outputPath);
+        if (!string.IsNullOrEmpty(directory))
+            Directory.CreateDirectory(directory);
+
+        File.WriteAllBytes(outputPath, data.ToArray());
+    }
+}
+```
+
+Then append the capturer to `src/Glimpse.Core/AppCapturer.cs`. Add `using System.Runtime.InteropServices;` at the top of the file (`SkiaSharp` is no longer needed there — the encoder owns it).
 
 ```csharp
 /// <summary>
@@ -1382,30 +1482,13 @@ public sealed class WindowsAppCapturer : IAppCapturer
                 ? CaptureWindow(new IntPtr(id))
                 : CaptureVirtualScreen();
 
-            EncodePng(captured.Buffer, captured.Width, captured.Height, request.OutputPath);
+            BgraPngEncoder.Write(captured.Buffer, captured.Width, captured.Height, request.OutputPath);
             return Task.FromResult(RenderOutcomes.From(request.OutputPath, true, ""));
         }
         catch (GlimpseCaptureException ex)
         {
             return Task.FromResult(RenderOutcomes.From(request.OutputPath, false, ex.Message));
         }
-    }
-
-    /// <summary>BGRA buffer -> PNG. Public so the encode is testable without a real window.</summary>
-    public static void EncodePng(byte[] bgraBuffer, int width, int height, string outputPath)
-    {
-        var info = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
-        using var bitmap = new SKBitmap(info);
-        Marshal.Copy(bgraBuffer, 0, bitmap.GetPixels(), bgraBuffer.Length);
-
-        using var image = SKImage.FromBitmap(bitmap);
-        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
-
-        var directory = Path.GetDirectoryName(outputPath);
-        if (!string.IsNullOrEmpty(directory))
-            Directory.CreateDirectory(directory);
-
-        File.WriteAllBytes(outputPath, data.ToArray());
     }
 
     /// <summary>Without per-monitor-v2 awareness Win32 reports virtualised coordinates and
@@ -1605,8 +1688,8 @@ public sealed class WindowsAppCapturer : IAppCapturer
 
 - [ ] **Step 4: Run the tests**
 
-Run: `dotnet test tests/Glimpse.Core.Tests --filter WindowsAppCapturerTests`
-Expected: all 7 pass on Windows (5 pure encode tests + 2 real captures). The orientation test is the one that catches a wrong `biHeight` sign.
+Run: `dotnet test tests/Glimpse.Core.Tests --filter "BgraPngEncoderTests|WindowsAppCapturerTests"`
+Expected: all 7 pass on Windows — 5 `BgraPngEncoderTests` (which also run on macOS) plus 2 `WindowsAppCapturerTests`. `Write_ShouldWriteRowsTopDownNotFlipped` is the one that catches a wrong `biHeight` sign.
 
 - [ ] **Step 5: Run the full suite**
 
@@ -1616,13 +1699,18 @@ Expected: 0 failures.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/Glimpse.Core/AppCapturer.cs tests/Glimpse.Core.Tests/WindowsAppCapturerTests.cs
+git add src/Glimpse.Core/BgraPngEncoder.cs src/Glimpse.Core/AppCapturer.cs tests/Glimpse.Core.Tests/
 git commit -m "feat(core): capture live windows on Windows via GDI
 
 Windows ships no screencapture equivalent, so this captures in-process:
 PrintWindow into a top-down DIB, encoded with SkiaSharp (already a
 Glimpse.Core dependency -- PngAnalysis decodes with the same library, so
 encode and decode cannot disagree about the format).
+
+The encoder is its own unattributed type rather than a member of the
+[SupportedOSPlatform(\"windows\")] capturer: it touches no Win32, so it
+runs on macOS CI too -- which matters because it is the one piece of
+genuinely new image code and macOS is the platform we cannot test locally.
 
 Two traps that fail SILENTLY rather than erroring, both pinned by tests:
 - PW_RENDERFULLCONTENT is required or DWM-composited windows (WPF,
