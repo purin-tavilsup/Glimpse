@@ -237,7 +237,38 @@ These coexist deliberately: the wrappers preserve "edits in the repo are instant
 (the property `bin/glimpse` was written to protect), while the global tool is the
 shareable artifact.
 
-### 3.6 CI
+### 3.6 `.gitattributes` — a prerequisite, not a nicety
+
+Working the same tree from both OSes exposes a line-ending hazard that is currently
+unguarded. Measured on the Windows dev box, 2026-08-01:
+
+```
+core.autocrlf = true          (global)
+.gitattributes                MISSING
+git ls-files --eol plugin/bin/glimpse   ->   i/lf  w/crlf
+```
+
+The index is still LF, so nothing is broken *today*. But the working tree is already CRLF
+for `plugin/bin/glimpse`, `scripts/install.sh` and `scripts/check-diagram-templates.sh`.
+The first time one of those is edited and committed from Windows, CRLF can reach the index —
+and then macOS reads the shebang as `#!/usr/bin/env bash\r` and fails with
+`bad interpreter: /usr/bin/env bash^M`. **That kills the `glimpse` command on the Mac
+outright**, from a change that looks like a whitespace diff.
+
+This work adds `glimpse.cmd` beside `bin/glimpse` and `install.ps1` beside `install.sh`, so
+the hazard is live rather than theoretical. Add `.gitattributes` **first**, before any other
+change, so every subsequent commit in this effort is protected:
+
+| Pattern | Setting | Why |
+|---|---|---|
+| `* text=auto eol=lf` | default LF | Normalises everything not named below |
+| `*.sh`, `plugin/bin/glimpse` | `text eol=lf` | A CRLF shebang is fatal on macOS |
+| `*.cmd`, `*.ps1` | `text eol=crlf` | `cmd.exe` mis-parses LF-only batch files, especially labels and `goto` |
+| `*.png` | `binary` | The repo ships exemplar and diagram PNGs |
+
+Then run `git add --renormalize .` once to bring the working tree back in line.
+
+### 3.7 CI
 
 No CI exists in this repo today. Add a GitHub Actions workflow running `dotnet build` +
 `dotnet test` on a `windows-latest` × `macos-latest` matrix. Without it, "supports both"
@@ -247,7 +278,7 @@ unnoticed.
 
 Renderer tools are **not** installed in CI. The end-to-end gates already skip when their
 tool is absent (once §3.1 makes that skip work correctly), so CI covers compilation and all
-unit tests on both OSes; real-render verification stays manual per §7.
+unit tests on both OSes; real-render verification stays manual per §6.
 
 ## 4. Components
 
@@ -270,6 +301,7 @@ tools/Glimpse.Capture/
 
 plugin/bin/glimpse.cmd    NEW
 scripts/install.ps1       NEW
+.gitattributes            NEW       LF for shells, CRLF for .cmd/.ps1 (see 3.6)
 .github/workflows/ci.yml  NEW
 README.md                 MODIFIED
 plugin/skills/*/SKILL.md  MODIFIED
@@ -318,22 +350,26 @@ not do it), Chrome, Edge, Node, .NET 10.
 
 ## 7. Build Order (for the plan)
 
-1. **`ToolLocator`** — managed PATH scan, 3-way Chrome, platform hints. *Clears all 7
+1. **`.gitattributes` + `git add --renormalize .`** — must be first, so every commit that
+   follows is protected from the CRLF hazard in §3.6.
+2. **`ToolLocator`** — managed PATH scan, 3-way Chrome, platform hints. *Clears all 7
    Windows test failures; everything else builds on a working tool resolver.*
-2. **`PngWriter`** — pure, no P/Invoke, fully testable. Do it before any capture code so
+3. **`PngWriter`** — pure, no P/Invoke, fully testable. Do it before any capture code so
    the Windows capturer has a verified encoder to write into.
-3. **`WindowId` → `long`** — small mechanical widening; land it before the code that needs it.
-4. **`IAppCapturer` seam + `MacAppCapturer`** — refactor only, no new behaviour. macOS
+4. **`WindowId` → `long`** — small mechanical widening across the three declarations in
+   §3.4; land it before the code that needs it.
+5. **`IAppCapturer` seam + `MacAppCapturer`** — refactor only, no new behaviour. macOS
    suite must stay green *before* Windows code exists.
-5. **`WindowsWindowFinder`** — verify against `--list-windows` on the real desktop.
-6. **`WindowsAppCapturer`** — `PrintWindow` + DPI + fallback chain.
-7. **`PlatformSupport` + `Program.cs`** — remove the OS branches.
-8. **Distribution** — `glimpse.cmd`, `install.ps1`, `PackAsTool`.
-9. **CI matrix.**
-10. **Docs** — README, both SKILL.md files, STATUS.md items 7 + 8.
+6. **`WindowsWindowFinder`** — verify against `--list-windows` on the real desktop.
+7. **`WindowsAppCapturer`** — `PrintWindow` + DPI + fallback chain.
+8. **`PlatformSupport` + `Program.cs`** — remove the OS branches.
+9. **Distribution** — `glimpse.cmd`, `install.ps1`, `PackAsTool`.
+10. **CI matrix.**
+11. **Docs** — README, both SKILL.md files, STATUS.md items 7 + 8.
 
-Steps 1–4 are safe on macOS by construction (1 and 3 are cross-platform; 2 is additive;
-4 is a pure refactor). Steps 5–7 are the only genuinely new platform behaviour.
+Steps 1–5 are safe on macOS by construction (1 protects it; 2 and 4 are cross-platform;
+3 is additive; 5 is a pure refactor). Steps 6–8 are the only genuinely new platform
+behaviour.
 
 ## 8. Open Questions
 
