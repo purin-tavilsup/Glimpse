@@ -14,7 +14,6 @@ public interface IAppCapturer
 }
 
 /// <summary>macOS capture via <c>screencapture</c>. Needs Screen Recording (TCC) permission.</summary>
-[SupportedOSPlatform("macos")]
 public sealed class MacAppCapturer(IProcessRunner runner) : IAppCapturer
 {
     /// <summary>Whole-screen args. Kept here (not in the registry) because the built-in
@@ -22,6 +21,10 @@ public sealed class MacAppCapturer(IProcessRunner runner) : IAppCapturer
     public static RendererSpec FullScreenSpec { get; } =
         new("app", "screencapture", ["-x", "{out}"], []);
 
+    // The platform attribute sits on the BEHAVIOUR, not the type: FullScreenSpec is a plain
+    // RendererSpec record with no interop, so attributing the whole class would force an
+    // untrue [SupportedOSPlatform("macos")] onto every test that merely reads that data.
+    [SupportedOSPlatform("macos")]
     public Task<RenderOutcome> CaptureAsync(RenderRequest request)
     {
         var spec = request.WindowId is null
