@@ -1369,17 +1369,20 @@ public sealed class WindowsAppCapturer : IAppCapturer
     private static readonly IntPtr PerMonitorAwareV2 = new(-4);
     private static bool dpiDeclared;
 
+    /// <summary>A captured frame: BGRA pixels plus the dimensions they describe.</summary>
+    private sealed record CapturedPixels(byte[] Buffer, int Width, int Height);
+
     public Task<RenderOutcome> CaptureAsync(RenderRequest request)
     {
         DeclareDpiAwareness();
 
         try
         {
-            var buffer = request.WindowId is { } id
-                ? CaptureWindow(new IntPtr(id), out var width, out var height)
-                : CaptureVirtualScreen(out width, out height);
+            var captured = request.WindowId is { } id
+                ? CaptureWindow(new IntPtr(id))
+                : CaptureVirtualScreen();
 
-            EncodePng(buffer, width, height, request.OutputPath);
+            EncodePng(captured.Buffer, captured.Width, captured.Height, request.OutputPath);
             return Task.FromResult(RenderOutcomes.From(request.OutputPath, true, ""));
         }
         catch (GlimpseCaptureException ex)
@@ -1398,7 +1401,10 @@ public sealed class WindowsAppCapturer : IAppCapturer
         using var image = SKImage.FromBitmap(bitmap);
         using var data = image.Encode(SKEncodedImageFormat.Png, 100);
 
-        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+        var directory = Path.GetDirectoryName(outputPath);
+        if (!string.IsNullOrEmpty(directory))
+            Directory.CreateDirectory(directory);
+
         File.WriteAllBytes(outputPath, data.ToArray());
     }
 
@@ -1414,67 +1420,55 @@ public sealed class WindowsAppCapturer : IAppCapturer
         SetProcessDpiAwarenessContext(PerMonitorAwareV2);
     }
 
-    private static byte[] CaptureWindow(IntPtr hwnd, out int width, out int height)
+    private static CapturedPixels CaptureWindow(IntPtr hwnd)
     {
         if (!IsWindow(hwnd))
             throw new GlimpseCaptureException($"No such window: {hwnd.ToInt64()}.");
 
-        var (x, y, w, h) = WindowBounds(hwnd);
-        if (w <= 0 || h <= 0)
+        var (x, y, width, height) = WindowBounds(hwnd);
+        if (width <= 0 || height <= 0)
             throw new GlimpseCaptureException("Window has no capturable area.");
 
-        width = w;
-        height = h;
-
-        var buffer = WithDib(w, h, (memoryDc, pixels) =>
-        {
-            if (PrintWindow(hwnd, memoryDc, PrintWindowRenderFullContent))
-                return true;
-
+        var buffer = WithDib(width, height, memoryDc =>
+            PrintWindow(hwnd, memoryDc, PrintWindowRenderFullContent)
             // PrintWindow refused: fall back to lifting the window's region off the screen.
-            var screenDc = GetDC(IntPtr.Zero);
-            try
-            {
-                return BitBlt(memoryDc, 0, 0, w, h, screenDc, x, y, SrcCopy | CaptureBlt);
-            }
-            finally
-            {
-                ReleaseDC(IntPtr.Zero, screenDc);
-            }
-        });
+            || BlitFromScreen(memoryDc, x, y, width, height));
 
-        return buffer;
+        return new CapturedPixels(buffer, width, height);
     }
 
-    private static byte[] CaptureVirtualScreen(out int width, out int height)
+    private static CapturedPixels CaptureVirtualScreen()
     {
         var x = GetSystemMetrics(SmXVirtualScreen);
         var y = GetSystemMetrics(SmYVirtualScreen);
-        width = GetSystemMetrics(SmCxVirtualScreen);
-        height = GetSystemMetrics(SmCyVirtualScreen);
+        var width = GetSystemMetrics(SmCxVirtualScreen);
+        var height = GetSystemMetrics(SmCyVirtualScreen);
 
         if (width <= 0 || height <= 0)
             throw new GlimpseCaptureException("Could not determine the virtual screen size.");
 
-        var w = width;
-        var h = height;
-        return WithDib(w, h, (memoryDc, pixels) =>
+        var buffer = WithDib(width, height, memoryDc =>
+            BlitFromScreen(memoryDc, x, y, width, height));
+
+        return new CapturedPixels(buffer, width, height);
+    }
+
+    private static bool BlitFromScreen(IntPtr memoryDc, int x, int y, int width, int height)
+    {
+        var screenDc = GetDC(IntPtr.Zero);
+        try
         {
-            var screenDc = GetDC(IntPtr.Zero);
-            try
-            {
-                return BitBlt(memoryDc, 0, 0, w, h, screenDc, x, y, SrcCopy | CaptureBlt);
-            }
-            finally
-            {
-                ReleaseDC(IntPtr.Zero, screenDc);
-            }
-        });
+            return BitBlt(memoryDc, 0, 0, width, height, screenDc, x, y, SrcCopy | CaptureBlt);
+        }
+        finally
+        {
+            ReleaseDC(IntPtr.Zero, screenDc);
+        }
     }
 
     /// <summary>Creates a top-down 32bpp DIB, runs <paramref name="draw"/> into it, and
     /// copies the pixels out. Owns every GDI handle it creates.</summary>
-    private static byte[] WithDib(int width, int height, Func<IntPtr, IntPtr, bool> draw)
+    private static byte[] WithDib(int width, int height, Func<IntPtr, bool> draw)
     {
         var header = new BitmapInfoHeader
         {
@@ -1500,7 +1494,7 @@ public sealed class WindowsAppCapturer : IAppCapturer
             var previous = SelectObject(memoryDc, dib);
             try
             {
-                if (!draw(memoryDc, pixels))
+                if (!draw(memoryDc))
                     throw new GlimpseCaptureException("PrintWindow and BitBlt both failed.");
 
                 var buffer = new byte[width * height * 4];
