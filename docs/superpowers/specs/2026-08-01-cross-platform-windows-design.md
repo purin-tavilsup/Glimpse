@@ -179,31 +179,46 @@ via screen-region `BitBlt` of the window's bounds → if the window cannot be re
 all, full-screen capture with a `fullscreen-fallback:` warning. That last rung mirrors what
 the macOS path already does in `Program.cs:154`.
 
-### 3.3 `PngWriter` — chosen to protect the single-TFM property
+### 3.3 PNG encoding — reuse SkiaSharp, already a `Glimpse.Core` dependency
 
-GDI returns raw BGRA pixels; something must encode them. Three options were weighed:
+GDI returns raw BGRA pixels; something must encode them. Four options were weighed:
 
 | Option | Verdict |
 |---|---|
-| **Hand-rolled `PngWriter` in `Glimpse.Core`** | **Chosen.** ~70 lines: IHDR + IDAT (via in-box `ZLibStream`) + IEND. |
+| **SkiaSharp** | **Chosen.** `Glimpse.Core.csproj:8` already references it (2.88.9, pinned in `Directory.Packages.props:14`) and `PngAnalysis.cs:22` already decodes with it. Cross-platform, no TFM impact, ~5 lines. |
+| Hand-rolled `PngWriter` | Rejected. ~70 lines of IHDR/IDAT/IEND plus CRC32 and per-scanline filter bytes — reinventing a format an existing dependency already handles. |
 | `System.Drawing.Common` | Rejected. Windows-only since .NET 7, so it forces `net10.0-windows` on `Glimpse.Core` **and** `Glimpse.Capture`, bringing conditional references, `#if WINDOWS` wiring, and a multi-TFM `PackAsTool`. More ceremony across the whole solution than an encoder is worth. |
 | Bundled PowerShell script as a `RendererSpec` | Rejected. Fits the "renderer is a command" model neatly, but puts real logic outside the test suite, pays ~1s of PowerShell startup per capture, and is exposed to execution-policy and quoting problems. |
 
-The chosen option keeps `Glimpse.Core` at plain `net10.0` guarded by
+> **Revised 2026-08-01, after the initial draft.** The first version of this section chose a
+> hand-rolled encoder, having weighed only the middle two options. That overlooked SkiaSharp
+> being a current `Glimpse.Core` dependency. Skia wins on every axis the hand-rolled option
+> was chosen for and costs nothing extra, so the standalone `PngWriter` component is dropped.
+
+The encode step lives inside `WindowsAppCapturer`, wrapping the GDI buffer directly:
+
+```csharp
+var info = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
+using var bitmap = new SKBitmap(info);
+Marshal.Copy(buffer, 0, bitmap.GetPixels(), buffer.Length);
+using var image = SKImage.FromBitmap(bitmap);
+using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+File.WriteAllBytes(outputPath, data.ToArray());
+```
+
+`SKColorType.Bgra8888` matches the memory layout of a Win32 32bpp top-down DIB exactly, so
+no channel swizzling is needed. The DIB must be created with a **negative** `biHeight` to get
+top-down rows; otherwise the capture is written vertically flipped — a failure that looks
+like a rendering bug rather than a buffer-orientation one.
+
+This keeps `Glimpse.Core` at plain `net10.0` with Windows code guarded by
 `[SupportedOSPlatform("windows")]` — **precisely the pattern `MacWindowFinder` already uses**
 with `[SupportedOSPlatform("macos")]`. Mac and Windows stay symmetric, and no consumer
 inherits a TFM split.
 
-CRC32 is required by the PNG spec. Prefer the in-box-adjacent `System.IO.Hashing` package
-(Microsoft-owned, tiny, added to `Directory.Packages.props`); if a zero-new-dependency
-`Glimpse.Core` is preferred at implementation time, a table-driven CRC32 is ~15 lines and
-is an acceptable substitute. Either way the encoder's correctness is pinned by the same
-tests.
-
-`PngWriter` is highly testable despite being new native-adjacent code, because the repo
-**already contains a PNG reader**: encode a known bitmap → feed it to the existing
-`PngAnalysis.Inspect` → assert dimensions, and assert blank/single-color detection fires
-exactly when it should. That is a real round-trip, not a self-consistency check.
+Correctness is pinned by a genuine round-trip rather than a self-consistency check: encode a
+known bitmap, then feed it to the existing `PngAnalysis.Inspect` and assert dimensions and
+that single-color detection fires exactly when it should.
 
 ### 3.4 Widen `WindowId` to `long`
 
@@ -288,8 +303,8 @@ src/Glimpse.Core/
   WindowInfo.cs           MODIFIED  WindowId uint -> long
   WindowFinder.cs         MODIFIED  + WindowsWindowFinder alongside MacWindowFinder
   AppCapturer.cs          NEW       IAppCapturer + MacAppCapturer + WindowsAppCapturer
+                                    (BGRA -> PNG via SkiaSharp, already referenced)
   PlatformSupport.cs      NEW       OS -> (IWindowFinder?, IAppCapturer?) factory
-  PngWriter.cs            NEW       BGRA -> PNG (IHDR/IDAT/IEND, ZLibStream, CRC32)
   RenderEngine.cs         MODIFIED  extract the shared analyse-tail so both engines reuse it
   RenderCommandBuilder.cs MODIFIED  RenderRequest.WindowId int? -> long?
   RendererSpec.cs         MODIFIED  chrome args: --user-data-dir; screencapture stays mac-only
@@ -331,8 +346,9 @@ suite in §1.
   tool → null; platform-correct hints. The existing `Resolve_WithRealShellTool` test asserts
   on `ls`, which does not exist on Windows — retarget it at `dotnet`, which is by
   definition present wherever the suite runs.
-- `PngWriter` — round-trip through `PngAnalysis`: dimensions preserved; a known-varied
-  bitmap is *not* flagged blank; a uniform bitmap *is* flagged single-color.
+- PNG encode (§3.3) — round-trip through `PngAnalysis`: dimensions preserved; a
+  known-varied buffer is *not* flagged single-color; a uniform buffer *is*; and a buffer
+  with a distinct first row proves the DIB is top-down rather than vertically flipped.
 - `WindowSelector` — unchanged tests must still pass; add Windows-shaped fixtures
   (tool-window at non-zero layer, cloaked window) to prove the `Layer` mapping.
 - `PlatformSupport` — returns the right pair per OS.
@@ -354,22 +370,19 @@ not do it), Chrome, Edge, Node, .NET 10.
    follows is protected from the CRLF hazard in §3.6.
 2. **`ToolLocator`** — managed PATH scan, 3-way Chrome, platform hints. *Clears all 7
    Windows test failures; everything else builds on a working tool resolver.*
-3. **`PngWriter`** — pure, no P/Invoke, fully testable. Do it before any capture code so
-   the Windows capturer has a verified encoder to write into.
-4. **`WindowId` → `long`** — small mechanical widening across the three declarations in
+3. **`WindowId` → `long`** — small mechanical widening across the three declarations in
    §3.4; land it before the code that needs it.
-5. **`IAppCapturer` seam + `MacAppCapturer`** — refactor only, no new behaviour. macOS
+4. **`IAppCapturer` seam + `MacAppCapturer`** — refactor only, no new behaviour. macOS
    suite must stay green *before* Windows code exists.
-6. **`WindowsWindowFinder`** — verify against `--list-windows` on the real desktop.
-7. **`WindowsAppCapturer`** — `PrintWindow` + DPI + fallback chain.
-8. **`PlatformSupport` + `Program.cs`** — remove the OS branches.
-9. **Distribution** — `glimpse.cmd`, `install.ps1`, `PackAsTool`.
-10. **CI matrix.**
-11. **Docs** — README, both SKILL.md files, STATUS.md items 7 + 8.
+5. **`WindowsWindowFinder`** — verify against `--list-windows` on the real desktop.
+6. **`WindowsAppCapturer`** — `PrintWindow` + DPI + SkiaSharp encode + fallback chain.
+7. **`PlatformSupport` + `Program.cs`** — remove the OS branches.
+8. **Distribution** — `glimpse.cmd`, `install.ps1`, `PackAsTool`.
+9. **CI matrix.**
+10. **Docs** — README, both SKILL.md files, STATUS.md items 7 + 8.
 
-Steps 1–5 are safe on macOS by construction (1 protects it; 2 and 4 are cross-platform;
-3 is additive; 5 is a pure refactor). Steps 6–8 are the only genuinely new platform
-behaviour.
+Steps 1–4 are safe on macOS by construction (1 protects it; 2 and 3 are cross-platform;
+4 is a pure refactor). Steps 5–7 are the only genuinely new platform behaviour.
 
 ## 8. Open Questions
 
