@@ -10,7 +10,7 @@ public sealed record CaptureOptions(
     int Width,
     int Height,
     SnapshotTheme Theme,
-    int? WindowId,
+    long? WindowId,
     string? Window,
     string? Title,
     bool Prune,
@@ -21,7 +21,8 @@ public sealed record CaptureOptions(
     public static CaptureOptions Parse(string[] args)
     {
         string? source = null, renderer = null, name = null, outDir = null, window = null, title = null;
-        int width = 1280, height = 800, windowId = 0;
+        int width = 1280, height = 800;
+        long windowId = 0;
         var theme = SnapshotTheme.Light;
         var prune = false;
         var noManifest = false;
@@ -40,7 +41,7 @@ public sealed record CaptureOptions(
                 case "--theme": theme = ThemeFor(Next(args, ref i)); break;
                 case "--window-id":
                     var windowIdRaw = Next(args, ref i);
-                    if (!int.TryParse(windowIdRaw, out windowId))
+                    if (!long.TryParse(windowIdRaw, out windowId))
                         throw new ArgumentException("--window-id requires an integer.");
                     hasWindowId = true;
                     break;

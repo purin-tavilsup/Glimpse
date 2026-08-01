@@ -5,7 +5,7 @@ namespace Glimpse.Core.Tests;
 
 public class WindowSelectorTests
 {
-    private static WindowInfo Win(uint id, string owner, string? title = null,
+    private static WindowInfo Win(long id, string owner, string? title = null,
         int w = 800, int h = 600, int layer = 0, bool onScreen = true) =>
         new(id, owner, title, 0, 0, w, h, layer, onScreen);
 
@@ -17,7 +17,7 @@ public class WindowSelectorTests
         var result = WindowSelector.SelectFrontmost(windows, "chrome");
 
         Assert.NotNull(result);
-        Assert.Equal(1u, result!.WindowId);
+        Assert.Equal(1L, result!.WindowId);
     }
 
     [Fact]
@@ -28,7 +28,7 @@ public class WindowSelectorTests
 
         var result = WindowSelector.SelectFrontmost(windows, "Code");
 
-        Assert.Equal(10u, result!.WindowId);
+        Assert.Equal(10L, result!.WindowId);
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public class WindowSelectorTests
 
         var result = WindowSelector.SelectFrontmost(windows, "Code", "settings");
 
-        Assert.Equal(21u, result!.WindowId);
+        Assert.Equal(21L, result!.WindowId);
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public class WindowSelectorTests
 
         var result = WindowSelector.SelectFrontmost(windows, "Safari");
 
-        Assert.Equal(33u, result!.WindowId);
+        Assert.Equal(33L, result!.WindowId);
     }
 
     [Fact]

@@ -136,7 +136,7 @@ async Task<RenderOutcome> RenderSourceAsync(CaptureOptions o, string outPath)
 
 async Task<RenderOutcome> CaptureAppAsync(CaptureOptions o, string outPath, List<string> warnings)
 {
-    int? windowId = o.WindowId;
+    long? windowId = o.WindowId;
 
     if (windowId is null && o.Window is not null)
     {
@@ -146,7 +146,7 @@ async Task<RenderOutcome> CaptureAppAsync(CaptureOptions o, string outPath, List
         var selected = WindowSelector.SelectFrontmost(new MacWindowFinder().ListOnScreen(), o.Window, o.Title);
         if (selected is not null)
         {
-            windowId = (int)selected.WindowId;
+            windowId = selected.WindowId;
             Console.WriteLine($"Window:   {selected.OwnerName} — {selected.Title ?? "(untitled)"} [id {selected.WindowId}]");
         }
         else

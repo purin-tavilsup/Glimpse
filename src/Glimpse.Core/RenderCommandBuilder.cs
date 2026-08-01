@@ -8,7 +8,7 @@ public sealed record RenderRequest(
     int Width,
     int Height,
     SnapshotTheme Theme,
-    int? WindowId = null);
+    long? WindowId = null);
 
 public sealed record RenderCommand(string Executable, IReadOnlyList<string> Args);
 
