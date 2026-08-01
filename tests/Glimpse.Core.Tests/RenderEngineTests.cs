@@ -7,9 +7,9 @@ namespace Glimpse.Core.Tests;
 
 public class RenderEngineTests
 {
-    // Uses 'ls' as a real, always-present tool so ToolLocator resolves; the fake runner
-    // simulates the tool's effect (writing a PNG or not) without actually invoking it.
-    private static RendererSpec LsSpec() => new("fake", "ls", ["{out}"], [".x"]);
+    // Uses 'dotnet' as a real, always-present tool so ToolLocator resolves it on any OS;
+    // the fake runner simulates the tool's effect (writing a PNG or not) without invoking it.
+    private static RendererSpec DotnetSpec() => new("fake", "dotnet", ["{out}"], [".x"]);
 
     private sealed class FakeRunner(int exitCode, Action onRun) : IProcessRunner
     {
@@ -53,7 +53,7 @@ public class RenderEngineTests
         var outPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.png");
         var engine = new RenderEngine(new FakeRunner(0, () => WriteTwoColorPng(outPath)));
 
-        var outcome = await engine.RenderAsync(LsSpec(), RequestTo(outPath));
+        var outcome = await engine.RenderAsync(DotnetSpec(), RequestTo(outPath));
 
         Assert.Equal("ok", outcome.Status);
         Assert.Equal(0, outcome.ExitCode);
@@ -67,7 +67,7 @@ public class RenderEngineTests
         var outPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.png");
         var engine = new RenderEngine(new FakeRunner(0, () => WriteSolidPng(outPath, SKColors.White)));
 
-        var outcome = await engine.RenderAsync(LsSpec(), RequestTo(outPath));
+        var outcome = await engine.RenderAsync(DotnetSpec(), RequestTo(outPath));
 
         Assert.Equal("ok", outcome.Status);
         Assert.Equal(1, outcome.ExitCode);
@@ -81,7 +81,7 @@ public class RenderEngineTests
         var outPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.png");
         var engine = new RenderEngine(new FakeRunner(1, () => { /* writes nothing */ }));
 
-        var outcome = await engine.RenderAsync(LsSpec(), RequestTo(outPath));
+        var outcome = await engine.RenderAsync(DotnetSpec(), RequestTo(outPath));
 
         Assert.Equal("failed", outcome.Status);
         Assert.Equal(2, outcome.ExitCode);
@@ -95,7 +95,7 @@ public class RenderEngineTests
         var engine = new RenderEngine(new FakeRunner(0, () => { }));
 
         var ex = await Assert.ThrowsAsync<GlimpseRenderToolException>(
-            () => engine.RenderAsync(spec, RequestTo("/tmp/x.png")));
+            () => engine.RenderAsync(spec, RequestTo(Path.Combine(Path.GetTempPath(), "x.png"))));
         Assert.Equal("definitely-not-a-real-tool-xyz", ex.Tool);
     }
 }
