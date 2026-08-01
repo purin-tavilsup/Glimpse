@@ -14,7 +14,17 @@ public static class BgraPngEncoder
     /// <summary><paramref name="bgraBuffer"/> must be top-down, 4 bytes per pixel.</summary>
     public static void Write(byte[] bgraBuffer, int width, int height, string outputPath)
     {
-        var info = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
+        var expected = checked(width * height * 4);
+        if (bgraBuffer.Length != expected)
+            throw new ArgumentException(
+                $"Buffer is {bgraBuffer.Length} bytes; {width}x{height} BGRA needs exactly {expected}.",
+                nameof(bgraBuffer));
+
+        // Opaque, not Premul: some capture paths (a screen BitBlt, notably) never write the 4th
+        // byte, so it can come back 0. Unpremultiplying a real RGB with A=0 yields (0,0,0,0) --
+        // a fully transparent PNG that still reports success. Opaque makes Skia ignore the byte
+        // entirely, so a stray zero alpha can never leak into the output.
+        var info = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Opaque);
         using var bitmap = new SKBitmap(info);
         Marshal.Copy(bgraBuffer, 0, bitmap.GetPixels(), bgraBuffer.Length);
 

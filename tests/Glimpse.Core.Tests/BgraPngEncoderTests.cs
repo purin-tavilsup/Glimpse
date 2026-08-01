@@ -90,20 +90,27 @@ public class BgraPngEncoderTests
     public void Write_WithABareFilename_ShouldNotThrow()
     {
         // Path.GetDirectoryName returns "" for a bare filename, and Directory.CreateDirectory("")
-        // throws -- so the encoder must skip the create in that case.
-        var previous = Directory.GetCurrentDirectory();
-        Directory.SetCurrentDirectory(Path.GetTempPath());
+        // throws -- so the encoder must skip the create in that case. Deliberately does NOT
+        // mutate Directory.SetCurrentDirectory: xUnit can run test classes in parallel, and a
+        // process-wide cwd change would be a latent flake for any concurrently-running test that
+        // resolves a relative path. A bare filename already has an empty GetDirectoryName()
+        // regardless of what the current directory happens to be.
         var name = $"{Guid.NewGuid():N}.png";
-        try
-        {
-            BgraPngEncoder.Write(TwoToneBgra(4, 4), 4, 4, name);
 
-            Assert.True(File.Exists(name));
-            File.Delete(name);
-        }
-        finally
-        {
-            Directory.SetCurrentDirectory(previous);
-        }
+        BgraPngEncoder.Write(TwoToneBgra(4, 4), 4, 4, name);
+
+        Assert.True(File.Exists(name));
+        File.Delete(name);
+    }
+
+    [Fact]
+    public void Write_WithMismatchedBufferLength_ShouldThrow()
+    {
+        // BgraPngEncoder.Write is the public contract Task 7 consumes; a caller passing a buffer
+        // longer than width*height*4 would otherwise write past Skia's allocation -- silent heap
+        // corruption, no exception. This guard turns that into a clear, immediate failure.
+        var tooLong = new byte[8 * 8 * 4 + 4];
+
+        Assert.Throws<ArgumentException>(() => BgraPngEncoder.Write(tooLong, 8, 8, TempPng()));
     }
 }
