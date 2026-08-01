@@ -20,3 +20,6 @@ packages/
 
 # Skill eval scratch (skill-creator workspaces)
 .claude/skills/*-workspace/
+
+# Subagent-driven-development scratch (ledger, task briefs, review packages)
+.superpowers/
