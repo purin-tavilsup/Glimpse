@@ -64,4 +64,34 @@ public class WindowSelectorTests
 
         Assert.Null(WindowSelector.SelectFrontmost(windows, "Notion"));
     }
+
+    [Fact]
+    public void SelectFrontmost_WithWindowsToolWindowAtLayerOne_ShouldSkipIt()
+    {
+        // WindowsWindowFinder maps WS_EX_TOOLWINDOW to layer 1 so this existing
+        // macOS-shaped filter excludes it without WindowSelector needing to change.
+        var windows = new[]
+        {
+            Win(50, "MyApp", "tooltip", layer: 1),
+            Win(51, "MyApp", "My App", w: 1400, h: 900),
+        };
+
+        var result = WindowSelector.SelectFrontmost(windows, "MyApp");
+
+        Assert.Equal(51L, result!.WindowId);
+    }
+
+    [Fact]
+    public void SelectFrontmost_WithCloakedWindowMarkedOffScreen_ShouldSkipIt()
+    {
+        var windows = new[]
+        {
+            Win(60, "MyApp", "ghost", onScreen: false),   // DWM-cloaked
+            Win(61, "MyApp", "My App", w: 1400, h: 900),
+        };
+
+        var result = WindowSelector.SelectFrontmost(windows, "MyApp");
+
+        Assert.Equal(61L, result!.WindowId);
+    }
 }
