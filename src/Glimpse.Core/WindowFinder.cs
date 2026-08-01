@@ -167,3 +167,144 @@ public sealed class MacWindowFinder : IWindowFinder
     [DllImport(CoreFoundation)]
     private static extern void CFRelease(IntPtr cf);
 }
+
+/// <summary>
+/// Windows window enumeration via <c>EnumWindows</c>. Enumerates in Z-order (top first),
+/// which is the front-to-back order <see cref="WindowSelector"/> already assumes from
+/// macOS's CGWindowList — so the selector needs no platform knowledge. Window titles need
+/// no special permission here, unlike macOS.
+/// </summary>
+[SupportedOSPlatform("windows")]
+public sealed class WindowsWindowFinder : IWindowFinder
+{
+    private const int GwlExStyle = -20;
+    private const long WsExToolWindow = 0x00000080;
+    private const int DwmwaCloaked = 14;
+    private const int DwmwaExtendedFrameBounds = 9;
+
+    private const int NormalLayer = 0;
+    private const int OverlayLayer = 1; // any non-zero layer is excluded by WindowSelector
+
+    public IReadOnlyList<WindowInfo> ListOnScreen()
+    {
+        var windows = new List<WindowInfo>();
+
+        EnumWindows((hwnd, _) =>
+        {
+            var info = ReadWindow(hwnd);
+            if (info is not null)
+                windows.Add(info);
+            return true; // keep enumerating
+        }, IntPtr.Zero);
+
+        return windows;
+    }
+
+    private static WindowInfo? ReadWindow(IntPtr hwnd)
+    {
+        var title = ReadTitle(hwnd);
+        if (title.Length == 0)
+            return null; // untitled top-levels are framework helpers, never capture targets
+
+        var owner = ReadOwnerProcessName(hwnd);
+        if (owner is null)
+            return null; // process gone or protected — not something we can target
+
+        var (x, y, width, height) = ReadBounds(hwnd);
+        var isToolWindow = (ReadExStyle(hwnd) & WsExToolWindow) != 0;
+        var onScreen = IsWindowVisible(hwnd) && !IsCloaked(hwnd);
+
+        return new WindowInfo(hwnd.ToInt64(), owner, title, x, y, width, height,
+            isToolWindow ? OverlayLayer : NormalLayer, onScreen);
+    }
+
+    private static string ReadTitle(IntPtr hwnd)
+    {
+        var length = GetWindowTextLength(hwnd);
+        if (length <= 0)
+            return "";
+
+        var buffer = new char[length + 1];
+        var copied = GetWindowText(hwnd, buffer, buffer.Length);
+        return copied > 0 ? new string(buffer, 0, copied) : "";
+    }
+
+    private static string? ReadOwnerProcessName(IntPtr hwnd)
+    {
+        GetWindowThreadProcessId(hwnd, out var processId);
+        if (processId == 0)
+            return null;
+
+        try
+        {
+            using var process = System.Diagnostics.Process.GetProcessById((int)processId);
+            return process.ProcessName;
+        }
+        catch (ArgumentException)
+        {
+            return null; // exited between enumeration and lookup
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Prefers the DWM frame bounds: GetWindowRect includes the invisible
+    /// resize border, which would bake dead pixels into every capture.</summary>
+    private static (int X, int Y, int Width, int Height) ReadBounds(IntPtr hwnd)
+    {
+        if (DwmGetWindowAttribute(hwnd, DwmwaExtendedFrameBounds, out Rect frame,
+                Marshal.SizeOf<Rect>()) == 0)
+            return ToSize(frame);
+
+        return GetWindowRect(hwnd, out var rect) ? ToSize(rect) : (0, 0, 0, 0);
+    }
+
+    private static (int X, int Y, int Width, int Height) ToSize(Rect rect)
+        => (rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top);
+
+    private static bool IsCloaked(IntPtr hwnd)
+        => DwmGetWindowAttribute(hwnd, DwmwaCloaked, out int cloaked, sizeof(int)) == 0
+           && cloaked != 0;
+
+    private static long ReadExStyle(IntPtr hwnd) => GetWindowLongPtr(hwnd, GwlExStyle).ToInt64();
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Rect
+    {
+        public int Left, Top, Right, Bottom;
+    }
+
+    private delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindowVisible(IntPtr hwnd);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "GetWindowTextW")]
+    private static extern int GetWindowText(IntPtr hwnd, char[] buffer, int maxCount);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "GetWindowTextLengthW")]
+    private static extern int GetWindowTextLength(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
+    private static extern IntPtr GetWindowLongPtr(IntPtr hwnd, int index);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetWindowRect(IntPtr hwnd, out Rect rect);
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmGetWindowAttribute(IntPtr hwnd, int attribute, out Rect value, int size);
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmGetWindowAttribute(IntPtr hwnd, int attribute, out int value, int size);
+}
