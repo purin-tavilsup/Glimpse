@@ -66,7 +66,7 @@ public sealed class MacWindowFinder : IWindowFinder
         var onScreen = ReadBoolOrDefault(dict, "kCGWindowIsOnscreen", defaultValue: true);
         var (x, y, w, h) = ReadBounds(dict);
 
-        return new WindowInfo((uint)id.Value, owner, title, x, y, w, h, (int)layer, onScreen);
+        return new WindowInfo(id.Value, owner, title, x, y, w, h, (int)layer, onScreen);
     }
 
     private static long? ReadNumber(IntPtr dict, string key)
