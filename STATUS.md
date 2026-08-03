@@ -5,7 +5,7 @@
 
 ## 🚧 IN FLIGHT: cross-platform (macOS + Windows) — branch `feat/cross-platform-windows`
 
-**Parked 2026-08-01 after Task 6 of 10. Nothing pushed; 13 commits local.**
+**Parked 2026-08-03 after Task 8 of 10. Nothing pushed; 15 commits local, tree clean at `2c2351a`.**
 Closes deferred item 7 below and unblocks item 8.
 
 - Spec: `docs/superpowers/specs/2026-08-01-cross-platform-windows-design.md`
@@ -13,29 +13,66 @@ Closes deferred item 7 below and unblocks item 8.
 - **Authoritative checkpoint (gitignored):** `.superpowers/sdd/2026-08-01-cross-platform-windows/progress.md`
   — every task's commits, all deferred minors, and the rulings made. **Read it first on resume.**
 
-**Done (Tasks 1-6), each TDD + task-reviewed:** `.gitattributes` line-ending guard ·
+**Done (Tasks 1-8), each TDD + task-reviewed:** `.gitattributes` line-ending guard ·
 `ToolLocator` resolves tools by managed PATH scan instead of `/usr/bin/which` ·
 `WindowId` widened to `long` for HWND · `IAppCapturer` seam with macOS behaviour unchanged ·
 `WindowsWindowFinder` via `EnumWindows` · `WindowsAppCapturer` via `PrintWindow` + GDI,
-encoding through a new cross-platform `BgraPngEncoder`.
+encoding through a new cross-platform `BgraPngEncoder` · `PlatformSupport` factory with
+`Program.cs` fully de-branched · Windows distribution (`glimpse.cmd`, `install.ps1`, `PackAsTool`).
 
-**Suite: 126 passed / 0 failed / 2 skipped on Windows** (baseline was 7 failures, all from
+**Suite: 129 passed / 0 failed / 2 skipped on Windows** (baseline was 7 failures, all from
 one hardcoded `/usr/bin/which`). `WindowSelector` never touched — Windows maps onto its
 existing contract.
 
-**Proven for real on Windows:** a mermaid diagram rendered (1124x993, via `mmdc.cmd`), and a
-live Chrome window captured with correct content, orientation and edges.
+**Proven for real on Windows:** a mermaid diagram rendered (1124x993, via `mmdc.cmd`); a live
+Chrome window captured with correct content, orientation and edges; and — new in Task 7 — the
+**whole window→capture path end to end through the CLI**: `--list-windows` (304 real windows,
+tool windows correctly at layer 1), `--window "charmap"` → `ok (477x430)` zero warnings with the
+PNG Read and verified (real glyph grid, right-side up, cropped to the window, both edges flush),
+plus the explicit `--window-id` path and the first Windows manifest write. Task 7's review
+confirmed all of this independently rather than taking it on trust.
 
-**Remaining: Tasks 7-10** — `PlatformSupport` + de-branch `Program.cs`; distribution
-(`glimpse.cmd`, `install.ps1`, `PackAsTool`); CI matrix; docs. Then a final whole-branch review.
+**Task 8 distribution proven:** `glimpse.cmd` renders through a real junction; the `glimpse.repo`
+sidecar was proven **load-bearing** by removing it (the junction path then resolves to
+`~/.claude/skills` exactly as the design note predicts) *and* the lexical fallback proven to
+cover direct-clone use; uninstall removes the junction leaving `plugin/` intact; both scripts
+re-tested in the **CRLF** form a fresh clone actually gets, not just the LF the editor wrote;
+`dotnet pack` produces `Glimpse.Capture.0.1.0.nupkg`.
 
-⚠️ **Task 7 must verify the window→capture path end to end through the CLI** (`--list-windows`,
-then `--window "chrome"`, then Read the PNG). That is the first exercise of the wired path, and
-Task 5's mapping has no automated coverage.
+**Remaining: Tasks 9-10** — CI matrix; docs. Then a final whole-branch review.
+
+⚠️ **Task 8's review was dispatched but the session parked before it reported — verdict UNKNOWN.
+Re-run it against `2c2351a` before Task 9.** Also confirm no stray global dotnet tool is
+installed (`dotnet tool list --global`) and that `~/.claude/skills/glimpse` still junctions to
+`C:\personal\Glimpse\plugin`; the review was asked to install and uninstall the packed tool.
+
+⚠️ **Task 9 needs a decision before it can go green.** `CaptureAsync_OnWindowsForFullScreen_-
+ShouldProduceANonBlankPng` does a real full-screen BitBlt and asserts zero warnings — on a
+GitHub runner's bare uniform desktop `PngAnalysis` will likely flag `single-color-frame` and
+turn the Windows leg red for an environment reason. That empty-warnings assert is the *only*
+automated guard on the real capture path, so weakening it to buy a green CI is the trade the
+Task 6 review argued against. Options and detail in the ledger.
+
+⚠️ **The CI matrix will not prove parity.** There is no `MacWindowFinderTests.cs` at all —
+`MacWindowFinder` has zero automated coverage, and the 7 Windows-only `SkippableFact`s skip on
+macOS. The matrix proves "both OSes compile and the shared logic passes". Task 10 docs must not
+overclaim it.
+
+⚠️ **Task 10 also owes the Task 7 I-1 fix (Pond's ruling):** `--list-windows` must mark the rows
+`WindowSelector` would reject, derived from the *same* predicate the selector uses (not a second
+copy of the rule), plus a docs line that the target window must be visible and not minimized.
 
 ⚠️ **Known residual gap:** real-capture *orientation* has no automated guard — flipping the
 DIB's `biHeight` sign today leaves every test green. A deterministic test needs a controlled
 fixture window; judged not worth a flaky test in the suite that gates the remaining tasks.
+
+⚠️ **Three pre-existing CLI defects found during the Task 7 review** (none introduced by this
+branch, all for the final review): `CaptureOptions.Parse` sits outside the try/catch so a bad
+flag crashes with a stack trace instead of exit 2; the `outcome with { Warnings = … }` rewrite
+never recomputes `ExitCode`, so a fullscreen-fallback warning can never raise the exit code
+(same on macOS, so fixing it *is* a macOS behaviour change); and spec §3.2's BitBlt fallback is
+specified to fire on a single-colour result too, but the code only falls back on `PrintWindow`
+returning false.
 
 ## Current state (main): ✅ TWO HALVES SHIPPED + PUBLISHED
 
@@ -108,7 +145,7 @@ derived from Pond's reference diagrams, rendering + verifying via glimpse.
    (`glimpse:glimpse`, `glimpse:diagram-design`) available there. macOS-only. Spec/plan:
    `docs/superpowers/{specs,plans}/2026-06-19-glimpse-distribution*`. (Live `--window
    "Recorder"` capture not run — needs the app running + Screen-Recording permission.)
-7. **🚧 Cross-platform (Windows) — IN FLIGHT, 6 of 10 tasks done.** See the section at the top
+7. **🚧 Cross-platform (Windows) — IN FLIGHT, 8 of 10 tasks done.** See the section at the top
    of this file. Scope grew beyond the original sketch: full parity including live-window
    capture, from a single `net10.0` target. Note the original note here was wrong on one
    point — `ToolLocator` did **not** become `which`→`where`; it stopped shelling out at all
@@ -129,6 +166,11 @@ derived from Pond's reference diagrams, rendering + verifying via glimpse.
   into a *public personal* repo. A local override is now set to
   `Purin Tavilsup <19279956+purin-tavilsup@users.noreply.github.com>`, matching every prior
   commit — but **a fresh clone reverts**, so re-set it.
+- **Windows install is LIVE on this box (Task 8, 2026-08-03):** `~/.claude/skills/glimpse` is a
+  **directory junction** → `C:\personal\Glimpse\plugin`, and `plugin/bin/glimpse.repo` (gitignored)
+  holds the resolved repo path the batch wrapper needs. Re-run `pwsh -File scripts/install.ps1`
+  after moving the repo, or the sidecar points at a stale path. `where.exe glimpse` still
+  unverified — it is Claude Code that puts the plugin `bin/` on PATH, so it needs a session restart.
 - Python 3.13 installed (`/opt/homebrew/bin/python3.13`) — needed for the skill-creator
   eval viewer (`generate_review.py`, requires 3.10+).
 - `gh` has two accounts; this repo's git identity + push routing use `purin-tavilsup`.
