@@ -5,13 +5,14 @@ var options = CaptureOptions.Parse(args);
 
 if (options.ListWindows)
 {
-    if (!OperatingSystem.IsMacOS())
+    var finder = PlatformSupport.WindowFinder();
+    if (finder is null)
     {
-        Console.Error.WriteLine("--list-windows is macOS-only.");
+        Console.Error.WriteLine(PlatformSupport.UnsupportedMessage("--list-windows"));
         return 2;
     }
 
-    foreach (var w in new MacWindowFinder().ListOnScreen())
+    foreach (var w in finder.ListOnScreen())
         Console.WriteLine($"[id {w.WindowId,-6}] layer {w.Layer,-3} {w.Width}x{w.Height}  {w.OwnerName} — {w.Title ?? "(untitled)"}");
     return 0;
 }
@@ -136,35 +137,32 @@ async Task<RenderOutcome> RenderSourceAsync(CaptureOptions o, string outPath)
 
 async Task<RenderOutcome> CaptureAppAsync(CaptureOptions o, string outPath, List<string> warnings)
 {
-    long? windowId = o.WindowId;
+    var capturer = PlatformSupport.AppCapturer(new ProcessRunner())
+        ?? throw new ArgumentException(PlatformSupport.UnsupportedMessage("The 'app' renderer"));
 
-    if (windowId is null && o.Window is not null)
+    // A null window id means "whole screen" to every capturer, which is also the fallback
+    // when --window matched nothing.
+    var windowId = o.WindowId ?? ResolveWindowId(o, warnings);
+
+    return await capturer.CaptureAsync(
+        new RenderRequest("", outPath, o.Width, o.Height, o.Theme, windowId));
+}
+
+long? ResolveWindowId(CaptureOptions o, List<string> warnings)
+{
+    if (o.Window is null)
+        return null;
+
+    var finder = PlatformSupport.WindowFinder()
+        ?? throw new ArgumentException(PlatformSupport.UnsupportedMessage("--window lookup"));
+
+    var selected = WindowSelector.SelectFrontmost(finder.ListOnScreen(), o.Window, o.Title);
+    if (selected is null)
     {
-        if (!OperatingSystem.IsMacOS())
-            throw new ArgumentException("--window lookup is macOS-only; pass --window-id instead.");
-
-        var selected = WindowSelector.SelectFrontmost(new MacWindowFinder().ListOnScreen(), o.Window, o.Title);
-        if (selected is not null)
-        {
-            windowId = selected.WindowId;
-            Console.WriteLine($"Window:   {selected.OwnerName} — {selected.Title ?? "(untitled)"} [id {selected.WindowId}]");
-        }
-        else
-        {
-            warnings.Add($"fullscreen-fallback:no on-screen window matching '{o.Window}'");
-        }
+        warnings.Add($"fullscreen-fallback:no on-screen window matching '{o.Window}'");
+        return null;
     }
 
-    var engine = new RenderEngine(new ProcessRunner());
-
-    // A resolved window id uses the built-in window-capture spec; otherwise capture the
-    // whole screen (-x). Either way RenderEngine resolves screencapture, runs, and analyses.
-    if (windowId is not null)
-    {
-        var spec = RendererRegistry.Default().Resolve("app", null);
-        return await engine.RenderAsync(spec, new RenderRequest("", outPath, o.Width, o.Height, o.Theme, windowId));
-    }
-
-    var fullscreen = new RendererSpec("app", "screencapture", ["-x", "{out}"], []);
-    return await engine.RenderAsync(fullscreen, new RenderRequest("", outPath, o.Width, o.Height, o.Theme, null));
+    Console.WriteLine($"Window:   {selected.OwnerName} — {selected.Title ?? "(untitled)"} [id {selected.WindowId}]");
+    return selected.WindowId;
 }
