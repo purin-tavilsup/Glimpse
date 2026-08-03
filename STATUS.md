@@ -41,10 +41,30 @@ re-tested in the **CRLF** form a fresh clone actually gets, not just the LF the 
 
 **Remaining: Tasks 9-10** — CI matrix; docs. Then a final whole-branch review.
 
-⚠️ **Task 8's review was dispatched but the session parked before it reported — verdict UNKNOWN.
-Re-run it against `2c2351a` before Task 9.** Also confirm no stray global dotnet tool is
-installed (`dotnet tool list --global`) and that `~/.claude/skills/glimpse` still junctions to
-`C:\personal\Glimpse\plugin`; the review was asked to install and uninstall the packed tool.
+⚠️ **Task 8's review came back NEEDS FIXES — the fix round has NOT been run.** Two Important
+items, both one-line fixes in `scripts/install.ps1`, both plan defects (all three files are
+byte-identical to the plan):
+- **`-Uninstall` has no link-type guard**, so it deletes a *real* file or directory at the link
+  path and reports `Removed` as if it were a link (a non-empty dir instead throws a raw .NET
+  exception). `install.sh` guards with `[ -L ]`, and `install.ps1`'s own *install* half guards on
+  `LinkType` — the two halves disagree about whether a real entry is sacred, and spec §3.5
+  claims parity. Worst path: the script correctly *refuses* a real directory, the user runs
+  `-Uninstall` to clear the way, and the thing just protected is deleted.
+- **`-Encoding ascii` silently mangles a non-ASCII repo path** and the install still prints
+  `Done.` Proven at `…\Müller Repos\Glimpse`: the sidecar gets `M?ler`, and every later
+  `glimpse` call dies with an `MSB1009` naming a path with a `?` in it — a failure that looks
+  nothing like the installer that "succeeded". Any non-Latin profile or folder name triggers it.
+  `cmd`'s `set /p` decodes in the console code page, so no static encoding is universally right:
+  write with `-Encoding oem` **and round-trip check**, refusing loudly at install time.
+
+✅ **The review closed the "packed but never installed" gap:** the dotnet tool was actually
+installed, `where.exe glimpse` resolved it, a mermaid render and a real window capture both
+worked from the packed tool (SkiaSharp natives and Win32 interop resolve correctly), and it was
+uninstalled. Five things I'd flagged as suspect all held up and should not be re-litigated:
+batch `%*` quoting (11-case battery, including `--window "Character Map"` and `100%%`), exit-code
+propagation through the junction (an empty digraph really does give exit 1), `setlocal` with no
+`endlocal`, the REFUSE branch genuinely terminating before the delete, and stale-junction
+handling. Windows PowerShell 5.1 is fine too.
 
 ⚠️ **Task 9 needs a decision before it can go green.** `CaptureAsync_OnWindowsForFullScreen_-
 ShouldProduceANonBlankPng` does a real full-screen BitBlt and asserts zero warnings — on a
@@ -57,6 +77,14 @@ Task 6 review argued against. Options and detail in the ledger.
 `MacWindowFinder` has zero automated coverage, and the 7 Windows-only `SkippableFact`s skip on
 macOS. The matrix proves "both OSes compile and the shared logic passes". Task 10 docs must not
 overclaim it.
+
+⚠️ **Correction to a recorded verification claim (found by the Task 8 review).** The Task 7 note
+that "`--window-id <id>` with no `--window` works" is **false**. `Program.cs:81` is
+`wantApp = options.Renderer == "app" || options.Window is not null`, so `--window-id` alone never
+routes to the app capturer — it fails with *"No renderer for extension ''"* and exit 2. The
+explicit-id path works only **with** `--renderer app`. That condition is byte-identical before
+this branch, so it is pre-existing behaviour on both platforms, not a regression — but the claim
+was wrong and Task 10's docs must state the real requirement.
 
 ⚠️ **Task 10 also owes the Task 7 I-1 fix (Pond's ruling):** `--list-windows` must mark the rows
 `WindowSelector` would reject, derived from the *same* predicate the selector uses (not a second
@@ -177,5 +205,5 @@ derived from Pond's reference diagrams, rendering + verifying via glimpse.
 
 ## Artifacts
 - Specs/plans: `docs/superpowers/{specs,plans}/`
-- SDD ledgers: `.git/sdd/progress.md`
+- SDD ledgers: `.superpowers/sdd/<date-slug>/progress.md` (gitignored)
 - Eval workspace (gitignored): `.claude/skills/diagram-design-workspace/`
