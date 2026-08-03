@@ -15,9 +15,14 @@ $plugin = Join-Path $repo 'plugin'
 $link   = Join-Path $HOME '.claude/skills/glimpse'
 
 if ($Uninstall) {
-    if (Test-Path $link) {
-        (Get-Item $link).Delete()
+    # Only ever remove a link. A real entry here is someone's own directory: the install
+    # path refuses to touch it, so uninstall must not delete it either.
+    $existing = Get-Item $link -ErrorAction SilentlyContinue
+    if ($existing -and $existing.LinkType) {
+        $existing.Delete()
         Write-Output "Removed $link"
+    } elseif ($existing) {
+        Write-Error "REFUSE: a real (non-link) entry exists at $link — remove it manually."
     } else {
         Write-Output "No link at $link"
     }
@@ -33,7 +38,22 @@ dotnet build (Join-Path $repo 'tools/Glimpse.Capture/Glimpse.Capture.csproj') -v
 if ($LASTEXITCODE -ne 0) { Write-Error 'Build failed.' }
 
 # The wrapper cannot resolve an ancestor junction from batch, so hand it the repo path.
-Set-Content -Path (Join-Path $plugin 'bin/glimpse.repo') -Value $repo -NoNewline -Encoding ascii
+# glimpse.cmd reads this with `set /p`, which decodes in the CONSOLE code page, so no single
+# encoding is universally right — writing ASCII turns 'Müller' into 'M?ller' and the wrapper
+# then dies on a path that never existed. Prove cmd.exe reads back exactly what we wrote, and
+# refuse loudly rather than report a successful install that cannot work.
+$sidecar = Join-Path $plugin 'bin/glimpse.repo'
+$readable = $false
+foreach ($encoding in 'oem', 'utf8', 'ascii') {
+    Set-Content -Path $sidecar -Value $repo -NoNewline -Encoding $encoding
+    if ((cmd.exe /v:on /c "set /p R=<""$sidecar"" & echo !R!") -eq $repo) {
+        $readable = $true
+        break
+    }
+}
+if (-not $readable) {
+    Write-Error "REFUSE: the batch wrapper cannot read back '$repo' — move the clone to a path your console code page can represent (ASCII is always safe)."
+}
 
 $skills = Join-Path $HOME '.claude/skills'
 New-Item -ItemType Directory -Force -Path $skills | Out-Null
