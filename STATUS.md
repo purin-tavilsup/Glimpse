@@ -41,9 +41,9 @@ re-tested in the **CRLF** form a fresh clone actually gets, not just the LF the 
 
 **Remaining: Tasks 9-10** — CI matrix; docs. Then a final whole-branch review.
 
-⚠️ **Task 8's review came back NEEDS FIXES — the fix round has NOT been run.** Two Important
-items, both one-line fixes in `scripts/install.ps1`, both plan defects (all three files are
-byte-identical to the plan):
+✅ **Task 8's review came back NEEDS FIXES and the fix round is DONE** (`d6aaf91`, suite
+unchanged at 129/0/2 since no C# was touched). Both were plan defects — all three files were
+byte-identical to the plan:
 - **`-Uninstall` has no link-type guard**, so it deletes a *real* file or directory at the link
   path and reports `Removed` as if it were a link (a non-empty dir instead throws a raw .NET
   exception). `install.sh` guards with `[ -L ]`, and `install.ps1`'s own *install* half guards on
@@ -54,8 +54,21 @@ byte-identical to the plan):
   `Done.` Proven at `…\Müller Repos\Glimpse`: the sidecar gets `M?ler`, and every later
   `glimpse` call dies with an `MSB1009` naming a path with a `?` in it — a failure that looks
   nothing like the installer that "succeeded". Any non-Latin profile or folder name triggers it.
-  `cmd`'s `set /p` decodes in the console code page, so no static encoding is universally right:
-  write with `-Encoding oem` **and round-trip check**, refusing loudly at install time.
+  `cmd`'s `set /p` decodes in the console code page, so no static encoding is universally right.
+
+**How they were fixed** (`d6aaf91`): uninstall now removes an entry only when it has a
+`LinkType`, refusing with exit 1 otherwise — verified against a **fake `$HOME`** for a real
+non-empty dir, a real empty dir and a real file (all refuse, all survive), while a real junction
+is still removed with `plugin/` intact. The sidecar now **negotiates** `oem → utf8 → ascii` and
+verifies each candidate by having **cmd.exe itself** read it back with the same `set /p` the
+wrapper uses, refusing loudly only if none round-trips. Measured on this box (console CP 65001):
+ASCII paths take `oem` on the first try so the normal case is unchanged; `…\Müller Repos\…` went
+from `M?ller` to working via `utf8`; `…\กรุง\…` went from `????` to working. That is deliberately
+*more* than the reviewer's minimum (`ascii` + a check), which would have refused every non-ASCII
+clone outright. Residual: a repo path containing `!` may false-refuse under delayed expansion —
+fails safe (loud refusal, never a silent wrong path), not worth handling until someone hits it.
+⚠️ The fix diff has **not** been re-reviewed by a subagent, which is the branch's convention;
+fold it into the final review.
 
 ✅ **The review closed the "packed but never installed" gap:** the dotnet tool was actually
 installed, `where.exe glimpse` resolved it, a mermaid render and a real window capture both
