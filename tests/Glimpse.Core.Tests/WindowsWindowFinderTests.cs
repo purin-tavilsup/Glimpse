@@ -33,7 +33,7 @@ public class WindowsWindowFinderTests
         Skip.IfNot(OperatingSystem.IsWindows(), "Windows-only window enumeration.");
 
         var selectable = (EnumerateOrNull() ?? [])
-            .Where(w => w.OnScreen && w.Layer == 0 && w.Width >= 50 && w.Height >= 50)
+            .Where(WindowSelector.IsSelectable)
             .ToList();
 
         Skip.If(selectable.Count == 0, "No normal on-screen window on this session.");
