@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore Glimpse.slnx
+
+      - name: Build
+        run: dotnet build Glimpse.slnx --no-restore -c Release
+
+      # Renderer tools are deliberately NOT installed: the end-to-end gates skip when
+      # their tool is absent, so CI covers compilation and all unit tests on both OSes.
+      # RealDesktop tests need real windows on screen, which a runner's bare session
+      # lacks; they keep their strict assertions and run locally instead.
+      - name: Test
+        run: dotnet test Glimpse.slnx --no-build -c Release --filter "Category!=RealDesktop" --logger "console;verbosity=normal"
