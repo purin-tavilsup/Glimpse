@@ -48,4 +48,17 @@ public class RenderCommandBuilderTests
 
         Assert.Throws<ArgumentException>(() => RenderCommandBuilder.Build(spec, Request(), "screencapture"));
     }
+
+    [Fact]
+    public void Build_ForSourceUrlArg_WithARelativeSource_ShouldPassAnAbsoluteFileUrl()
+    {
+        var spec = new RendererSpec("web", "chrome", ["{sourceurl}"], [".html"]);
+        var request = new RenderRequest("page with space.html", "/out/p.png", 1280, 800, SnapshotTheme.Light);
+
+        var command = RenderCommandBuilder.Build(spec, request, "chrome");
+
+        var url = new Uri(command.Args.Single());
+        Assert.True(url.IsFile);
+        Assert.Equal(Path.GetFullPath("page with space.html"), url.LocalPath);
+    }
 }

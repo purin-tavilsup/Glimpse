@@ -25,6 +25,8 @@ public static class RenderCommandBuilder
     {
         if (arg.Contains("{windowid}") && request.WindowId is null)
             throw new ArgumentException("This renderer needs a window id, but none was supplied.");
+        if (arg.Contains("{sourceurl}"))
+            arg = arg.Replace("{sourceurl}", new Uri(Path.GetFullPath(request.Source)).AbsoluteUri);
 
         return arg
             .Replace("{source}", request.Source)
