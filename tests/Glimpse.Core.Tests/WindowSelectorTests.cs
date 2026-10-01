@@ -94,4 +94,25 @@ public class WindowSelectorTests
 
         Assert.Equal(61L, result!.WindowId);
     }
+
+    [Theory]
+    [InlineData(1, 800, 600, true)]     // tool window / overlay layer
+    [InlineData(0, 800, 600, false)]    // minimized or cloaked
+    [InlineData(0, 49, 600, true)]      // narrower than the helper-window floor
+    [InlineData(0, 800, 49, true)]      // shorter than the helper-window floor
+    public void IsSelectable_WithAWindowTheSelectorSkips_ShouldReturnFalse(
+        int layer, int width, int height, bool onScreen)
+    {
+        var window = Win(70, "Recorder", w: width, h: height, layer: layer, onScreen: onScreen);
+
+        Assert.False(WindowSelector.IsSelectable(window));
+    }
+
+    [Fact]
+    public void IsSelectable_WithANormalWindowAtTheSizeFloor_ShouldReturnTrue()
+    {
+        var window = Win(71, "Recorder", w: 50, h: 50);
+
+        Assert.True(WindowSelector.IsSelectable(window));
+    }
 }
