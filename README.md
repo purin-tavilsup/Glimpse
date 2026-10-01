@@ -58,8 +58,9 @@ dotnet run --project tools/Glimpse.Capture -- --renderer app --window "Chrome" -
 dotnet run --project tools/Glimpse.Capture -- --list-windows
 ```
 
-The target window must be visible and not minimized. `--list-windows` shows every window but
-marks the ones `--window` can never pick as `(not selectable)`.
+The target window must be visible and not minimized. `--list-windows` marks the rows `--window`
+can never pick as `(not selectable)`; on Windows that is most of them, since it lists every
+top-level window, including untitled ones (apps that draw their own title bar leave it empty).
 
 The CLI prints the absolute PNG path, the status (`ok` / `failed`), any warnings, and the manifest location:
 
@@ -81,7 +82,7 @@ Manifest: /…/.claude/tmp/ui-snapshots/glimpse/manifest.json
 | `--window <app>` | Capture the frontmost window whose app name contains this (implies `app`) |
 | `--title <text>` | With `--window`, also require the window title to contain this |
 | `--window-id <n>` | Exact window to capture (CGWindowID on macOS, HWND on Windows); needs `--renderer app` |
-| `--list-windows` | Print every window with its id, layer and size, then exit |
+| `--list-windows` | Print the windows (on-screen ones on macOS, every top-level window on Windows) with id, layer and size, then exit |
 | `--prune` | Delete stale PNGs from previous runs |
 | `--no-manifest` | Don't write `manifest.json` — handy for one-off renders into a folder you don't want cluttered (e.g. `docs/`) |
 
