@@ -131,7 +131,7 @@ to keep that dir clean.
 ## Requirements
 
 - **mermaid** (`mmdc`) for everything except icon-cloud — usually already installed.
-- **D2** (`brew install d2`) only for icon-cloud architecture. If D2 is missing, tell the
+- **D2** (macOS `brew install d2`, Windows `winget install Terrastruct.d2`) only for icon-cloud architecture. If D2 is missing, tell the
   user, then fall back to `layered.mmd` (no icons). **D2 icons fail silently** — a wrong
   `icon:` URL renders nothing with no error. So for any `.d2` with icons:
   **before rendering, run `glimpse --check-icons <file>.d2`** — it HTTP-checks every

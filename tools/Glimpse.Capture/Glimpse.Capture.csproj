@@ -4,6 +4,19 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
 
+  <!-- Shared cross-platform distribution path (`dotnet tool install`). Not the marketplace
+       plugin's pre-built artifact: the package is CLI-only and is not committed. -->
+  <PropertyGroup>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>glimpse</ToolCommandName>
+    <PackageId>Glimpse.Capture</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Purin Tavilsup</Authors>
+    <Description>Render any UI or diagram to a PNG so an agent can see it, critique it, and iterate.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)../../artifacts/nupkg</PackageOutputPath>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\Glimpse.Abstractions\Glimpse.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Glimpse.Core\Glimpse.Core.csproj" />

@@ -7,9 +7,9 @@ namespace Glimpse.Core.Tests;
 
 public class RenderEngineTests
 {
-    // Uses 'ls' as a real, always-present tool so ToolLocator resolves; the fake runner
-    // simulates the tool's effect (writing a PNG or not) without actually invoking it.
-    private static RendererSpec LsSpec() => new("fake", "ls", ["{out}"], [".x"]);
+    // Uses 'dotnet' as a real, always-present tool so ToolLocator resolves it on any OS;
+    // the fake runner simulates the tool's effect (writing a PNG or not) without invoking it.
+    private static RendererSpec DotnetSpec() => new("fake", "dotnet", ["{out}"], [".x"]);
 
     private sealed class FakeRunner(int exitCode, Action onRun) : IProcessRunner
     {
@@ -53,7 +53,7 @@ public class RenderEngineTests
         var outPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.png");
         var engine = new RenderEngine(new FakeRunner(0, () => WriteTwoColorPng(outPath)));
 
-        var outcome = await engine.RenderAsync(LsSpec(), RequestTo(outPath));
+        var outcome = await engine.RenderAsync(DotnetSpec(), RequestTo(outPath));
 
         Assert.Equal("ok", outcome.Status);
         Assert.Equal(0, outcome.ExitCode);
@@ -67,7 +67,7 @@ public class RenderEngineTests
         var outPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.png");
         var engine = new RenderEngine(new FakeRunner(0, () => WriteSolidPng(outPath, SKColors.White)));
 
-        var outcome = await engine.RenderAsync(LsSpec(), RequestTo(outPath));
+        var outcome = await engine.RenderAsync(DotnetSpec(), RequestTo(outPath));
 
         Assert.Equal("ok", outcome.Status);
         Assert.Equal(1, outcome.ExitCode);
@@ -81,12 +81,74 @@ public class RenderEngineTests
         var outPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.png");
         var engine = new RenderEngine(new FakeRunner(1, () => { /* writes nothing */ }));
 
-        var outcome = await engine.RenderAsync(LsSpec(), RequestTo(outPath));
+        var outcome = await engine.RenderAsync(DotnetSpec(), RequestTo(outPath));
 
         Assert.Equal("failed", outcome.Status);
         Assert.Equal(2, outcome.ExitCode);
         Assert.Contains(outcome.Warnings, w => w.StartsWith("render-failed:"));
     }
+
+    [Fact]
+    public async Task RenderAsync_WhenToolSucceedsButNeverWritesAPng_ShouldFailWithinTheWaitBound()
+    {
+        var outPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.png");
+        var engine = new RenderEngine(new FakeRunner(0, () => { /* writes nothing */ }), ShortOutputWait);
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+
+        var outcome = await engine.RenderAsync(DotnetSpec(), RequestTo(outPath));
+
+        Assert.Equal("failed", outcome.Status);
+        Assert.True(clock.Elapsed < ShortOutputWait + TimeSpan.FromSeconds(2), $"waited {clock.Elapsed}");
+    }
+
+    [Fact]
+    public async Task RenderAsync_WhenToolExitsBeforeItsPngIsWritten_ShouldWaitAndReturnOk()
+    {
+        // Headless Chrome on Windows: the launched process exits 0 while a child is still
+        // writing the screenshot, so the PNG lands a moment after the exit.
+        var outPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.png");
+        Task? lateWrite = null;
+        var engine = new RenderEngine(new FakeRunner(0, () =>
+            lateWrite = Task.Delay(LateWriteDelay).ContinueWith(_ => WriteTwoColorPng(outPath))));
+
+        var outcome = await engine.RenderAsync(DotnetSpec(), RequestTo(outPath));
+
+        await lateWrite!;
+        Assert.Equal("ok", outcome.Status);
+        Assert.Equal(0, outcome.ExitCode);
+    }
+
+    [Fact]
+    public async Task RenderAsync_WhenAReRenderLandsLateOverAnOldPng_ShouldAnalyseTheNewPng()
+    {
+        // Re-renders reuse the stable --name path, so the previous run's PNG is already there
+        // when the tool exits early. Analysing it would report the old image as this run's.
+        var outPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.png");
+        WriteSolidPng(outPath, SKColors.Red);
+        Task? lateWrite = null;
+        var engine = new RenderEngine(new FakeRunner(0, () =>
+            lateWrite = Task.Delay(LateWriteDelay).ContinueWith(_ => WriteTwoColorPng(outPath))));
+
+        var outcome = await engine.RenderAsync(DotnetSpec(), RequestTo(outPath));
+
+        await lateWrite!;
+        Assert.Empty(outcome.Warnings);
+    }
+
+    [Fact]
+    public async Task RenderAsync_WhenTheToolFailsOnAReRender_ShouldNotReportTheOldPngAsOk()
+    {
+        var outPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.png");
+        WriteTwoColorPng(outPath);
+        var engine = new RenderEngine(new FakeRunner(0, () => { /* writes nothing */ }), ShortOutputWait);
+
+        var outcome = await engine.RenderAsync(DotnetSpec(), RequestTo(outPath));
+
+        Assert.Equal("failed", outcome.Status);
+    }
+
+    private static readonly TimeSpan ShortOutputWait = TimeSpan.FromMilliseconds(300);
+    private static readonly TimeSpan LateWriteDelay = TimeSpan.FromMilliseconds(400);
 
     [Fact]
     public async Task RenderAsync_WhenToolMissing_ShouldThrowWithHint()
@@ -95,7 +157,7 @@ public class RenderEngineTests
         var engine = new RenderEngine(new FakeRunner(0, () => { }));
 
         var ex = await Assert.ThrowsAsync<GlimpseRenderToolException>(
-            () => engine.RenderAsync(spec, RequestTo("/tmp/x.png")));
+            () => engine.RenderAsync(spec, RequestTo(Path.Combine(Path.GetTempPath(), "x.png"))));
         Assert.Equal("definitely-not-a-real-tool-xyz", ex.Tool);
     }
 }

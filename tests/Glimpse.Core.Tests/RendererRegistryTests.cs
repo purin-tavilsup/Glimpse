@@ -48,4 +48,14 @@ public class RendererRegistryTests
 
         Assert.Equal(new[] { "mermaid", "graphviz", "d2", "web", "app" }, names);
     }
+
+    [Fact]
+    public void All_ForWeb_ShouldPassChromeAFileUrlNotARawPath()
+    {
+        // Chrome reads a bare relative path such as "page.html" as a host name, not a file.
+        var web = BuiltInRenderers.All.Single(r => r.Name == "web");
+
+        Assert.Contains("{sourceurl}", web.Args);
+        Assert.DoesNotContain("{source}", web.Args);
+    }
 }

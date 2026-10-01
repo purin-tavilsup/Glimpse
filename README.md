@@ -18,9 +18,27 @@ A renderer is just **a command that writes a PNG to a path** — so adding one i
 | `.dot` / `.gv` | `graphviz` | Graphviz (`dot`) |
 | `.d2` | `d2` | [D2](https://d2lang.com) (`d2`) |
 | `.html` / `.htm` | `web` | headless Chrome |
-| live macOS window | `app` | `screencapture` |
+| live app window | `app` | macOS `screencapture` · Windows GDI (in-process) |
 
 The renderer is inferred from the file extension, or set explicitly with `--renderer`.
+
+## Platforms
+
+Glimpse runs on **macOS and Windows**. All five renderers work on both; only the
+underlying mechanism differs, and only for `app`:
+
+| | macOS | Windows |
+|---|---|---|
+| Install | `./scripts/install.sh` (symlink) | `./scripts/install.ps1` (junction — no admin needed) |
+| `app` capture | `screencapture` | in-process GDI (`PrintWindow`) |
+| Permission needed | Screen Recording, for `app` | none |
+| Diagram tools | `brew install graphviz d2` | `winget install Graphviz.Graphviz Terrastruct.d2` |
+
+`mmdc` is `npm i -g @mermaid-js/mermaid-cli` on both. Linux is untested and unclaimed —
+diagram renderers should work, `app` will not.
+
+CI builds and runs the unit tests on both OSes. That proves both compile and the shared logic
+passes; it does not prove live capture, which needs a real desktop and is verified by hand.
 
 ## Quick start
 
@@ -33,9 +51,16 @@ dotnet run --project tools/Glimpse.Capture -- diagram.mmd --name my-diagram
 # Explicit renderer, dark theme, custom size
 dotnet run --project tools/Glimpse.Capture -- page.html --renderer web --theme dark --size 1440x900
 
-# Screenshot a live macOS window
-dotnet run --project tools/Glimpse.Capture -- --renderer app --window-id 42 --name app-shot
+# Screenshot a live app window by name (macOS and Windows)
+dotnet run --project tools/Glimpse.Capture -- --renderer app --window "Chrome" --name app-shot
+
+# List capturable windows and their ids
+dotnet run --project tools/Glimpse.Capture -- --list-windows
 ```
+
+The target window must be visible and not minimized. `--list-windows` marks the rows `--window`
+can never pick as `(not selectable)`; on Windows that is most of them, since it lists every
+top-level window, including untitled ones (apps that draw their own title bar leave it empty).
 
 The CLI prints the absolute PNG path, the status (`ok` / `failed`), any warnings, and the manifest location:
 
@@ -54,7 +79,10 @@ Manifest: /…/.claude/tmp/ui-snapshots/glimpse/manifest.json
 | `--out <dir>` | Output directory (default: per-repo `.claude/tmp/ui-snapshots/glimpse/`) |
 | `--theme light\|dark` | Theme passed to renderers that support it |
 | `--size WxH` | Render dimensions, e.g. `1280x800` |
-| `--window-id <n>` | Window id for the `app` renderer |
+| `--window <app>` | Capture the frontmost window whose app name contains this (implies `app`) |
+| `--title <text>` | With `--window`, also require the window title to contain this |
+| `--window-id <n>` | Exact window to capture (CGWindowID on macOS, HWND on Windows); needs `--renderer app` |
+| `--list-windows` | Print the windows (on-screen ones on macOS, every top-level window on Windows) with id, layer and size, then exit |
 | `--prune` | Delete stale PNGs from previous runs |
 | `--no-manifest` | Don't write `manifest.json` — handy for one-off renders into a folder you don't want cluttered (e.g. `docs/`) |
 
