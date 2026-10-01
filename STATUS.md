@@ -1,12 +1,23 @@
 # STATUS — Glimpse
 
 > Goal: tools so an agent can *see* rendered UI/diagrams (read PNGs) and iterate.
-> Repo: https://github.com/purin-tavilsup/Glimpse (public, MIT). Last updated: 2026-08-01.
+> Repo: https://github.com/purin-tavilsup/Glimpse (public, MIT). Last updated: 2026-10-01.
 
 ## 🚧 IN FLIGHT: cross-platform (macOS + Windows) — branch `feat/cross-platform-windows`
 
-**Parked 2026-08-03 after Task 8 of 10. Nothing pushed; 15 commits local, tree clean at `2c2351a`.**
+**All 10 tasks done (2026-10-01). Nothing pushed yet. Next: final whole-branch review → push → PR.**
 Closes deferred item 7 below and unblocks item 8.
+
+**Tasks 9–10 (2026-10-01):** CI matrix `windows-latest` × `macos-latest` (checkout v7,
+setup-dotnet v6). Desktop-bound tests are tagged `Category=RealDesktop` and filtered out of CI,
+keeping their strict asserts for local runs (Pond's ruling). `--list-windows` marks rows the
+selector rejects, from the one shared `WindowSelector.IsSelectable` predicate. Docs are
+per-platform, state the visible/not-minimized requirement, and correct `--window-id` (needs
+`--renderer app`). Suite **138 passed / 0 failed / 2 skipped** on Windows; every documented
+command was re-run. ⚠️ `scripts/check-diagram-templates.sh`: 5/6 clean, **`cloud.d2` fails
+outside Glimpse** — D2 v0.7.1's PNG export fetches a Playwright driver from
+`playwright.azureedge.net`, which now 404s. Try `winget upgrade Terrastruct.d2`. Neither
+Task 9 nor 10 has had its subagent review; the final review covers them with Task 8's fix.
 
 - Spec: `docs/superpowers/specs/2026-08-01-cross-platform-windows-design.md`
 - Plan: `docs/superpowers/plans/2026-08-01-cross-platform-windows.md`
@@ -186,7 +197,7 @@ derived from Pond's reference diagrams, rendering + verifying via glimpse.
    (`glimpse:glimpse`, `glimpse:diagram-design`) available there. macOS-only. Spec/plan:
    `docs/superpowers/{specs,plans}/2026-06-19-glimpse-distribution*`. (Live `--window
    "Recorder"` capture not run — needs the app running + Screen-Recording permission.)
-7. **🚧 Cross-platform (Windows) — IN FLIGHT, 8 of 10 tasks done.** See the section at the top
+7. **🚧 Cross-platform (Windows) — all 10 tasks done on the branch; final review + push pending.** See the section at the top
    of this file. Scope grew beyond the original sketch: full parity including live-window
    capture, from a single `net10.0` target. Note the original note here was wrong on one
    point — `ToolLocator` did **not** become `which`→`where`; it stopped shelling out at all
