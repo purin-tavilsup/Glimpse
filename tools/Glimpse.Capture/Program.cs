@@ -13,7 +13,7 @@ if (options.ListWindows)
     }
 
     foreach (var w in finder.ListOnScreen())
-        Console.WriteLine($"[id {w.WindowId,-6}] layer {w.Layer,-3} {w.Width}x{w.Height}  {w.OwnerName} — {w.Title ?? "(untitled)"}");
+        Console.WriteLine(WindowListing.FormatRow(w));
     return 0;
 }
 
