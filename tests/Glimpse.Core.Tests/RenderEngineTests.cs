@@ -89,6 +89,39 @@ public class RenderEngineTests
     }
 
     [Fact]
+    public async Task RenderAsync_WhenToolSucceedsButNeverWritesAPng_ShouldFailWithinTheWaitBound()
+    {
+        var outPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.png");
+        var engine = new RenderEngine(new FakeRunner(0, () => { /* writes nothing */ }), ShortOutputWait);
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+
+        var outcome = await engine.RenderAsync(DotnetSpec(), RequestTo(outPath));
+
+        Assert.Equal("failed", outcome.Status);
+        Assert.True(clock.Elapsed < ShortOutputWait + TimeSpan.FromSeconds(2), $"waited {clock.Elapsed}");
+    }
+
+    [Fact]
+    public async Task RenderAsync_WhenToolExitsBeforeItsPngIsWritten_ShouldWaitAndReturnOk()
+    {
+        // Headless Chrome on Windows: the launched process exits 0 while a child is still
+        // writing the screenshot, so the PNG lands a moment after the exit.
+        var outPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.png");
+        Task? lateWrite = null;
+        var engine = new RenderEngine(new FakeRunner(0, () =>
+            lateWrite = Task.Delay(LateWriteDelay).ContinueWith(_ => WriteTwoColorPng(outPath))));
+
+        var outcome = await engine.RenderAsync(DotnetSpec(), RequestTo(outPath));
+
+        await lateWrite!;
+        Assert.Equal("ok", outcome.Status);
+        Assert.Equal(0, outcome.ExitCode);
+    }
+
+    private static readonly TimeSpan ShortOutputWait = TimeSpan.FromMilliseconds(300);
+    private static readonly TimeSpan LateWriteDelay = TimeSpan.FromMilliseconds(400);
+
+    [Fact]
     public async Task RenderAsync_WhenToolMissing_ShouldThrowWithHint()
     {
         var spec = new RendererSpec("mermaid", "definitely-not-a-real-tool-xyz", ["{out}"], [".x"]);
