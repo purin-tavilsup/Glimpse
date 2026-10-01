@@ -26,7 +26,7 @@ public static class RenderCommandBuilder
         if (arg.Contains("{windowid}") && request.WindowId is null)
             throw new ArgumentException("This renderer needs a window id, but none was supplied.");
         if (arg.Contains("{sourceurl}"))
-            arg = arg.Replace("{sourceurl}", new Uri(Path.GetFullPath(request.Source)).AbsoluteUri);
+            arg = arg.Replace("{sourceurl}", ToFileUrl(request.Source));
 
         return arg
             .Replace("{source}", request.Source)
@@ -35,5 +35,17 @@ public static class RenderCommandBuilder
             .Replace("{height}", request.Height.ToString())
             .Replace("{theme}", request.Theme == SnapshotTheme.Dark ? "dark" : "default")
             .Replace("{windowid}", request.WindowId?.ToString() ?? "");
+    }
+
+    private static string ToFileUrl(string source)
+    {
+        try
+        {
+            return new Uri(Path.GetFullPath(source)).AbsoluteUri;
+        }
+        catch (UriFormatException ex)
+        {
+            throw new ArgumentException($"'{source}' cannot be turned into a file URL: {ex.Message}", ex);
+        }
     }
 }
