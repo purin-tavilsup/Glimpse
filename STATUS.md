@@ -34,15 +34,18 @@ Suite **143 passed / 0 failed / 2 skipped** on Windows.
 - `ToolLocator` on macOS accepts a file without the exec bit, where `which` did not (review M-5).
 - Untitled windows are now selectable, so without `--title` a visible untitled popup of the same
   app (an open menu, an overlay) in front of the real window would win. None on this box; a later
-  tie-break could prefer the first titled match.
+  tie-break could prefer the first titled match. ⚠️ **Do not add it naively:** on 2026-10-01 the
+  Recorder's untitled sign-in prompt sat in front of its titled "Setting Up…" window and the
+  untitled one was the right capture; "prefer titled" would have picked the wrong window.
 - An existing Windows install with a **non-ASCII** repo path keeps an old-format sidecar that the
   new wrapper rejects; re-run `scripts/install.ps1` once after updating.
 - Pre-existing CLI defects, same on both OSes: `CaptureOptions.Parse` sits outside the try/catch
   (a bad flag prints a stack trace); `outcome with { Warnings }` never recomputes `ExitCode`, so a
   `fullscreen-fallback` warning cannot raise it; the BitBlt fallback fires only when `PrintWindow`
   returns false, not on a single-colour result as spec §3.2 says.
-- `scripts/check-diagram-templates.sh`: `cloud.d2` fails on D2 0.9 — the GCP Container Registry
-  icon uses an SVG style D2's importer rejects. Fix queued: bundle a cleaned copy (Pond's ruling).
+- `scripts/check-diagram-templates.sh`: `cloud.d2` failed on D2 0.9 — three GCP
+  icons (Container Registry, Cloud SQL, Pub/Sub) use an SVG style D2's importer rejects; fixed on
+  branch `fix/d2-cloud-icon` (bundled cleaned copies), not pushed yet.
 
 ## Current state (main): ✅ TWO HALVES SHIPPED + PUBLISHED
 
