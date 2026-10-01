@@ -44,6 +44,9 @@ public sealed class RenderEngine(IProcessRunner runner, TimeSpan? outputWait = n
             ?? throw new GlimpseRenderToolException(spec.Tool, ToolLocator.InstallHint(spec.Tool));
 
         var command = RenderCommandBuilder.Build(spec, request, executable);
+        // Re-renders reuse a stable path. Removing the previous PNG first is what makes "the file
+        // exists" below mean "this run wrote it", for the wait and for the outcome alike.
+        File.Delete(request.OutputPath);
         var result = await runner.RunAsync(command.Executable, command.Args);
         if (result.ExitCode == 0)
             await WaitForOutputAsync(request.OutputPath);

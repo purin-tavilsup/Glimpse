@@ -118,6 +118,35 @@ public class RenderEngineTests
         Assert.Equal(0, outcome.ExitCode);
     }
 
+    [Fact]
+    public async Task RenderAsync_WhenAReRenderLandsLateOverAnOldPng_ShouldAnalyseTheNewPng()
+    {
+        // Re-renders reuse the stable --name path, so the previous run's PNG is already there
+        // when the tool exits early. Analysing it would report the old image as this run's.
+        var outPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.png");
+        WriteSolidPng(outPath, SKColors.Red);
+        Task? lateWrite = null;
+        var engine = new RenderEngine(new FakeRunner(0, () =>
+            lateWrite = Task.Delay(LateWriteDelay).ContinueWith(_ => WriteTwoColorPng(outPath))));
+
+        var outcome = await engine.RenderAsync(DotnetSpec(), RequestTo(outPath));
+
+        await lateWrite!;
+        Assert.Empty(outcome.Warnings);
+    }
+
+    [Fact]
+    public async Task RenderAsync_WhenTheToolFailsOnAReRender_ShouldNotReportTheOldPngAsOk()
+    {
+        var outPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.png");
+        WriteTwoColorPng(outPath);
+        var engine = new RenderEngine(new FakeRunner(0, () => { /* writes nothing */ }), ShortOutputWait);
+
+        var outcome = await engine.RenderAsync(DotnetSpec(), RequestTo(outPath));
+
+        Assert.Equal("failed", outcome.Status);
+    }
+
     private static readonly TimeSpan ShortOutputWait = TimeSpan.FromMilliseconds(300);
     private static readonly TimeSpan LateWriteDelay = TimeSpan.FromMilliseconds(400);
 
