@@ -2,7 +2,8 @@ namespace Glimpse.Core;
 
 /// <summary>
 /// A renderer is a command that writes a PNG to a path. <see cref="Args"/> are passed to
-/// <see cref="Tool"/> with placeholders substituted: {source} {out} {width} {height} {theme} {windowid}.
+/// <see cref="Tool"/> with placeholders substituted: {source} {out} {width} {height} {theme} {windowid},
+/// and {sourceurl} for tools that take a URL (an absolute file:// URL of the source).
 /// </summary>
 public sealed record RendererSpec(
     string Name,
@@ -27,7 +28,7 @@ public static class BuiltInRenderers
             [".d2"]),
 
         new("web", "chrome",
-            ["--headless", "--disable-gpu", "--screenshot={out}", "--window-size={width},{height}", "{source}"],
+            ["--headless", "--disable-gpu", "--screenshot={out}", "--window-size={width},{height}", "{sourceurl}"],
             [".html", ".htm"]),
 
         new("app", "screencapture",

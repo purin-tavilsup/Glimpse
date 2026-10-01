@@ -108,4 +108,24 @@ public class CaptureOptionsTests
         Assert.True(options.CheckIcons);
         Assert.Equal("diagram.d2", options.Source);
     }
+
+    [Fact]
+    public void Parse_WithWindowIdBeyondIntRange_ShouldKeepTheFullValue()
+    {
+        // A Windows HWND is pointer-sized. Truncating it to int silently targets the
+        // wrong window (or none), which looks like a capture bug rather than a parse bug.
+        const long hwnd = 4_294_967_296L; // 2^32, unrepresentable as int
+
+        var options = CaptureOptions.Parse(["--renderer", "app", "--window-id", "4294967296"]);
+
+        Assert.Equal(hwnd, options.WindowId);
+    }
+
+    [Fact]
+    public void Parse_WithSmallWindowId_ShouldStillParse()
+    {
+        var options = CaptureOptions.Parse(["--renderer", "app", "--window-id", "42"]);
+
+        Assert.Equal(42L, options.WindowId);
+    }
 }

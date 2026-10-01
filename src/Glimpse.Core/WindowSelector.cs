@@ -21,9 +21,7 @@ public static class WindowSelector
     {
         foreach (var w in windows)
         {
-            if (!w.OnScreen || w.Layer != 0)
-                continue;
-            if (w.Width < MinWidth || w.Height < MinHeight)
+            if (!IsSelectable(w))
                 continue;
             if (!w.OwnerName.Contains(appMatch, StringComparison.OrdinalIgnoreCase))
                 continue;
@@ -36,4 +34,15 @@ public static class WindowSelector
 
         return null;
     }
+
+    /// <summary>
+    /// Whether <see cref="SelectFrontmost"/> would ever consider this window: on screen,
+    /// normal layer, and at least the helper-window size floor. Public so a window listing
+    /// can mark rejected rows from this same rule instead of a copy that drifts.
+    /// </summary>
+    public static bool IsSelectable(WindowInfo window) =>
+        window.OnScreen
+        && window.Layer == 0
+        && window.Width >= MinWidth
+        && window.Height >= MinHeight;
 }

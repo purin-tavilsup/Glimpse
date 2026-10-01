@@ -7,9 +7,13 @@ obj/
 *.user
 .vs/
 
+# Written by scripts/install.ps1 — machine-specific repo path for the Windows wrapper.
+plugin/bin/glimpse.repo
+
 # NuGet
 *.nupkg
 packages/
+artifacts/
 
 # Rider/VS
 .idea/
@@ -20,3 +24,6 @@ packages/
 
 # Skill eval scratch (skill-creator workspaces)
 .claude/skills/*-workspace/
+
+# Subagent-driven-development scratch (ledger, task briefs, review packages)
+.superpowers/
