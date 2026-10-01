@@ -34,8 +34,10 @@ public static class RenderOutcomes
 }
 
 /// <summary>Resolve tool -> run command -> analyse PNG -> outcome. The whole pipeline, minus persistence.</summary>
-public sealed class RenderEngine(IProcessRunner runner)
+public sealed class RenderEngine(IProcessRunner runner, TimeSpan? outputWait = null)
 {
+    private readonly TimeSpan _outputWait = outputWait ?? TimeSpan.FromSeconds(5);
+
     public async Task<RenderOutcome> RenderAsync(RendererSpec spec, RenderRequest request)
     {
         var executable = ToolLocator.Resolve(spec.Tool)
@@ -43,6 +45,29 @@ public sealed class RenderEngine(IProcessRunner runner)
 
         var command = RenderCommandBuilder.Build(spec, request, executable);
         var result = await runner.RunAsync(command.Executable, command.Args);
+        if (result.ExitCode == 0)
+            await WaitForOutputAsync(request.OutputPath);
+
         return RenderOutcomes.From(request.OutputPath, result.ExitCode == 0, result.StdErr);
+    }
+
+    // Headless Chrome on Windows can exit 0 while a child process is still writing the PNG.
+    // Polls until the file exists and its size holds steady across two reads, or the wait runs
+    // out; a tool that never writes still fails, just _outputWait later.
+    private async Task WaitForOutputAsync(string path)
+    {
+        var poll = TimeSpan.FromMilliseconds(100);
+        var deadline = DateTime.UtcNow + _outputWait;
+        long lastLength = -1;
+
+        while (DateTime.UtcNow < deadline)
+        {
+            var length = File.Exists(path) ? new FileInfo(path).Length : -1;
+            if (length > 0 && length == lastLength)
+                return;
+
+            lastLength = length;
+            await Task.Delay(poll);
+        }
     }
 }
