@@ -20,6 +20,7 @@ if ($Uninstall) {
     $existing = Get-Item $link -ErrorAction SilentlyContinue
     if ($existing -and $existing.LinkType) {
         $existing.Delete()
+        Remove-Item (Join-Path $plugin 'bin/glimpse.repo') -ErrorAction SilentlyContinue
         Write-Output "Removed $link"
     } elseif ($existing) {
         Write-Error "REFUSE: a real (non-link) entry exists at $link — remove it manually."
@@ -37,22 +38,20 @@ Write-Output 'Building Glimpse.Capture...'
 dotnet build (Join-Path $repo 'tools/Glimpse.Capture/Glimpse.Capture.csproj') -v quiet
 if ($LASTEXITCODE -ne 0) { Write-Error 'Build failed.' }
 
-# The wrapper cannot resolve an ancestor junction from batch, so hand it the repo path.
-# glimpse.cmd reads this with `set /p`, which decodes in the CONSOLE code page, so no single
-# encoding is universally right — writing ASCII turns 'Müller' into 'M?ller' and the wrapper
-# then dies on a path that never existed. Prove cmd.exe reads back exactly what we wrote, and
-# refuse loudly rather than report a successful install that cannot work.
+# The wrapper cannot resolve an ancestor junction from batch, so hand it the repo path. It is
+# written as UTF-8 without a BOM and glimpse.cmd reads it under code page 65001, so the result
+# does not depend on the code page of whichever shell later runs glimpse. Prove it by asking
+# the wrapper itself under two different caller code pages. The answer is an exit code
+# because printed text would be re-decoded on its way back here, which is the very trap
+# being checked for. Refuse loudly rather than report an install that cannot work.
 $sidecar = Join-Path $plugin 'bin/glimpse.repo'
-$readable = $false
-foreach ($encoding in 'oem', 'utf8', 'ascii') {
-    Set-Content -Path $sidecar -Value $repo -NoNewline -Encoding $encoding
-    if ((cmd.exe /v:on /c "set /p R=<""$sidecar"" & echo !R!") -eq $repo) {
-        $readable = $true
-        break
+[IO.File]::WriteAllText($sidecar, $repo, [Text.UTF8Encoding]::new($false))
+$wrapper = Join-Path $plugin 'bin/glimpse.cmd'
+foreach ($callerCodePage in 437, 65001) {
+    cmd.exe /d /c "chcp $callerCodePage >nul & ""$wrapper"" --check-sidecar"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "REFUSE: under code page $callerCodePage the batch wrapper cannot read the repo path '$repo' back."
     }
-}
-if (-not $readable) {
-    Write-Error "REFUSE: the batch wrapper cannot read back '$repo' — move the clone to a path your console code page can represent (ASCII is always safe)."
 }
 
 $skills = Join-Path $HOME '.claude/skills'
