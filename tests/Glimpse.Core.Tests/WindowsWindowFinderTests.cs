@@ -46,6 +46,22 @@ public class WindowsWindowFinderTests
     }
 
     [SkippableFact]
+    [Trait("Category", TestCategories.RealDesktop)]
+    public void ListOnScreen_OnWindows_WithAnUntitledVisibleWindow_ShouldListItAsSelectable()
+    {
+        Skip.IfNot(OperatingSystem.IsWindows(), "Windows-only window enumeration.");
+        // Apps that draw their own title bar (Avalonia dialogs with Title="") leave the native
+        // title empty; such a window is still a real capture target.
+        using var untitled = UntitledWindow.Show(width: 300, height: 200);
+
+        var found = (EnumerateOrNull() ?? []).SingleOrDefault(w => w.WindowId == untitled.Handle);
+
+        Assert.NotNull(found);
+        Assert.Null(found.Title);
+        Assert.True(WindowSelector.IsSelectable(found));
+    }
+
+    [SkippableFact]
     public void ListOnScreen_OnWindows_ShouldReturnDistinctWindowIds()
     {
         Skip.IfNot(OperatingSystem.IsWindows(), "Windows-only window enumeration.");

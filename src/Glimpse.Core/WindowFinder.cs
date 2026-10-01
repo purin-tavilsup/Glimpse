@@ -204,9 +204,9 @@ public sealed class WindowsWindowFinder : IWindowFinder
 
     private static WindowInfo? ReadWindow(IntPtr hwnd)
     {
+        // An empty title is not a filter: apps that draw their own title bar leave it empty on
+        // real windows. Helpers are excluded by WindowSelector's visibility and size rule instead.
         var title = ReadTitle(hwnd);
-        if (title.Length == 0)
-            return null; // untitled top-levels are framework helpers, never capture targets
 
         var owner = ReadOwnerProcessName(hwnd);
         if (owner is null)
@@ -216,7 +216,7 @@ public sealed class WindowsWindowFinder : IWindowFinder
         var isToolWindow = (ReadExStyle(hwnd) & WsExToolWindow) != 0;
         var onScreen = IsWindowVisible(hwnd) && !IsCloaked(hwnd);
 
-        return new WindowInfo(hwnd.ToInt64(), owner, title, x, y, width, height,
+        return new WindowInfo(hwnd.ToInt64(), owner, title.Length == 0 ? null : title, x, y, width, height,
             isToolWindow ? OverlayLayer : NormalLayer, onScreen);
     }
 
