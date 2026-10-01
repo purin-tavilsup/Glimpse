@@ -47,11 +47,17 @@ if ($LASTEXITCODE -ne 0) { Write-Error 'Build failed.' }
 $sidecar = Join-Path $plugin 'bin/glimpse.repo'
 [IO.File]::WriteAllText($sidecar, $repo, [Text.UTF8Encoding]::new($false))
 $wrapper = Join-Path $plugin 'bin/glimpse.cmd'
-foreach ($callerCodePage in 437, 65001) {
-    cmd.exe /d /c "chcp $callerCodePage >nul & ""$wrapper"" --check-sidecar"
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "REFUSE: under code page $callerCodePage the batch wrapper cannot read the repo path '$repo' back."
+# The probes share this console, so its code page is put back however the check ends.
+$userCodePage = (cmd.exe /d /c chcp) -replace '\D', ''
+try {
+    foreach ($callerCodePage in 437, 65001) {
+        cmd.exe /d /c "chcp $callerCodePage >nul & ""$wrapper"" --check-sidecar"
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "REFUSE: under code page $callerCodePage the batch wrapper cannot read the repo path '$repo' back."
+        }
     }
+} finally {
+    cmd.exe /d /c "chcp $userCodePage >nul"
 }
 
 $skills = Join-Path $HOME '.claude/skills'

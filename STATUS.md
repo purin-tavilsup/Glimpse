@@ -32,6 +32,11 @@ Suite **143 passed / 0 failed / 2 skipped** on Windows.
 - CI does not prove parity: `MacWindowFinder` has no tests and the Windows-only facts skip on macOS.
 - Real-capture orientation has no automated guard (flipping `biHeight` leaves every test green).
 - `ToolLocator` on macOS accepts a file without the exec bit, where `which` did not (review M-5).
+- Untitled windows are now selectable, so without `--title` a visible untitled popup of the same
+  app (an open menu, an overlay) in front of the real window would win. None on this box; a later
+  tie-break could prefer the first titled match.
+- An existing Windows install with a **non-ASCII** repo path keeps an old-format sidecar that the
+  new wrapper rejects; re-run `scripts/install.ps1` once after updating.
 - Pre-existing CLI defects, same on both OSes: `CaptureOptions.Parse` sits outside the try/catch
   (a bad flag prints a stack trace); `outcome with { Warnings }` never recomputes `ExitCode`, so a
   `fullscreen-fallback` warning cannot raise it; the BitBlt fallback fires only when `PrintWindow`
