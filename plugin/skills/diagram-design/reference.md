@@ -101,7 +101,9 @@ person icon is bundled at `assets/user.png` (the source of truth).
   only the icon shows. The ready-made data URI is in `templates/layered.mmd` — copy it. To
   regenerate from the asset (kept small): `sips -z 64 64 assets/user.png --out /tmp/u.png`
   then `base64 -i /tmp/u.png`.
-- **D2** — `user: User { shape: image; icon: <absolute path to assets/user.png, or a data URI> }`.
+- **D2** — `user: User { shape: image; icon: ../assets/user.png }` from a file in `templates/`.
+  D2 resolves a relative `icon:` path against the `.d2` file's folder, not the working
+  directory; elsewhere use an absolute path or a data URI.
 - **Sequence diagrams** keep the standard `actor` keyword (stick figure) — mermaid
   `sequenceDiagram` can't use a custom actor image, and the stick figure is conventional.
 
@@ -130,3 +132,9 @@ person icon is bundled at `assets/user.png` (the source of truth).
 - Verified-good icon URLs (examples): GitHub `dev%2Fgithub.svg`; GCP Cloud Run
   `gcp%2FProducts%20and%20services%2FCompute%2FCloud%20Run.svg`; Cloud SQL
   `…%2FDatabases%2FCloud%20SQL.svg`; Pub/Sub `…%2FData%20Analytics%2FCloud%20PubSub.svg`.
+- **D2 0.9+ imports SVG icons and rejects some styles** — the render fails with
+  `d2svgimport: … unsupported style property "isolation"`. Many catalog GCP icons carry it;
+  Cloud SQL, Pub/Sub and Container Registry (used for Artifact Registry, which has no icon of
+  its own) are bundled under `assets/gcp-*.svg` with `isolation: isolate` removed. Do the same
+  for any other icon that fails this way. `--check-icons` only checks `http(s)` icons, so a
+  bundled one is verified by Reading the PNG.
