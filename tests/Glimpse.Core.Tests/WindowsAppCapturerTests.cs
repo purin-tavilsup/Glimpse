@@ -20,6 +20,7 @@ public class WindowsAppCapturerTests
     }
 
     [SkippableFact]
+    [Trait("Category", TestCategories.RealDesktop)]
     public async Task CaptureAsync_OnWindowsForFullScreen_ShouldProduceANonBlankPng()
     {
         Skip.IfNot(OperatingSystem.IsWindows(), "Windows-only capture.");

@@ -16,6 +16,7 @@ public class WindowsWindowFinderTests
         => OperatingSystem.IsWindows() ? new WindowsWindowFinder().ListOnScreen() : null;
 
     [SkippableFact]
+    [Trait("Category", TestCategories.RealDesktop)]
     public void ListOnScreen_OnWindows_ShouldFindAtLeastOneRealWindow()
     {
         Skip.IfNot(OperatingSystem.IsWindows(), "Windows-only window enumeration.");
