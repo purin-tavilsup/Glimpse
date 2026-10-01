@@ -4,8 +4,8 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
 
-  <!-- Shared cross-platform distribution path, and the pre-built-artifact slot the
-       marketplace plugin needs (it cannot build .NET itself). -->
+  <!-- Shared cross-platform distribution path (`dotnet tool install`). Not the marketplace
+       plugin's pre-built artifact: the package is CLI-only and is not committed. -->
   <PropertyGroup>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>glimpse</ToolCommandName>
