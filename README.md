@@ -29,7 +29,7 @@ underlying mechanism differs, and only for `app`:
 
 | | macOS | Windows |
 |---|---|---|
-| Install | `./scripts/install.sh` (symlink) | `./scripts/install.ps1` (junction — no admin needed) |
+| Install | `./scripts/install.sh` (symlink) | `./scripts/install.ps1` (junction — no admin needed; also puts `glimpse` on the user PATH) |
 | `app` capture | `screencapture` | in-process GDI (`PrintWindow`) |
 | Permission needed | Screen Recording, for `app` | none |
 | Diagram tools | `brew install graphviz d2` | `winget install Graphviz.Graphviz Terrastruct.d2` |
