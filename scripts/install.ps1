@@ -13,8 +13,49 @@ $ErrorActionPreference = 'Stop'
 $repo   = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $plugin = Join-Path $repo 'plugin'
 $link   = Join-Path $HOME '.claude/skills/glimpse'
+# Claude Code puts a plugin's bin/ on its Bash tool's PATH only, so PowerShell, cmd and IDE
+# terminals reach glimpse.cmd through the user PATH. The entry points through the junction so
+# it survives moving the repo.
+$bin    = [IO.Path]::GetFullPath((Join-Path $link 'bin'))
+
+# The registry is edited directly because [Environment]::SetEnvironmentVariable rewrites the
+# user PATH as REG_SZ with every %VAR% expanded, silently breaking entries that rely on them.
+function Update-UserPath([string]$entry, [switch]$Remove) {
+    $key = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Environment')
+    try {
+        $raw     = [string]$key.GetValue('Path', '', 'DoNotExpandEnvironmentNames')
+        $entries = @($raw -split ';' | Where-Object { $_ })
+        $others  = @($entries | Where-Object { $_.TrimEnd('\') -ne $entry })
+        $present = $others.Count -lt $entries.Count
+        $wanted  = -not $Remove
+        if ($present -eq $wanted) { return $false }
+        $updated = if ($Remove) { $others } else { $others + $entry }
+        $key.SetValue('Path', ($updated -join ';'), 'ExpandString')
+    } finally {
+        $key.Dispose()
+    }
+    Send-EnvironmentChanged
+    return $true
+}
+
+# New shells inherit Explorer's copy of the environment, which only reloads on this broadcast;
+# without it the PATH change waits for the next sign-in.
+function Send-EnvironmentChanged {
+    if (-not ('Glimpse.Win32' -as [type])) {
+        Add-Type -Namespace Glimpse -Name Win32 -MemberDefinition @'
+[DllImport("user32.dll", CharSet = CharSet.Unicode)]
+public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint msg, UIntPtr wParam, string lParam, uint flags, uint timeout, out UIntPtr result);
+'@
+    }
+    $result = [UIntPtr]::Zero
+    # HWND_BROADCAST + WM_SETTINGCHANGE; SMTO_ABORTIFHUNG with a 5s cap so one hung window
+    # cannot stall the install.
+    [void][Glimpse.Win32]::SendMessageTimeout([IntPtr]0xffff, 0x1A, [UIntPtr]::Zero, 'Environment', 2, 5000, [ref]$result)
+}
 
 if ($Uninstall) {
+    if (Update-UserPath $bin -Remove) { Write-Output "Removed $bin from the user PATH" }
+
     # Only ever remove a link. A real entry here is someone's own directory: the install
     # path refuses to touch it, so uninstall must not delete it either.
     $existing = Get-Item $link -ErrorAction SilentlyContinue
@@ -73,6 +114,7 @@ if (Test-Path $link) {
 
 New-Item -ItemType Junction -Path $link -Target $plugin | Out-Null
 Write-Output "Linked $link -> $plugin"
+if (Update-UserPath $bin) { Write-Output "Added $bin to the user PATH" }
 Write-Output ''
 Write-Output "Done. Restart Claude Code (or run /reload-plugins) to load the 'glimpse' plugin."
 Write-Output 'Verify (in a NEW session):  claude plugin list   and   where.exe glimpse'
