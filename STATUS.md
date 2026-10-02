@@ -44,8 +44,8 @@ Suite **143 passed / 0 failed / 2 skipped** on Windows.
   `fullscreen-fallback` warning cannot raise it; the BitBlt fallback fires only when `PrintWindow`
   returns false, not on a single-colour result as spec §3.2 says.
 - `scripts/check-diagram-templates.sh`: `cloud.d2` failed on D2 0.9 — three GCP
-  icons (Container Registry, Cloud SQL, Pub/Sub) use an SVG style D2's importer rejects; fixed on
-  branch `fix/d2-cloud-icon` (bundled cleaned copies), not pushed yet.
+  icons (Container Registry, Cloud SQL, Pub/Sub) use an SVG style D2's importer rejects; fixed in
+  PR #4 (bundled cleaned copies).
 
 ## Current state (main): ✅ TWO HALVES SHIPPED + PUBLISHED
 
