@@ -3,10 +3,10 @@
 > Goal: tools so an agent can *see* rendered UI/diagrams (read PNGs) and iterate.
 > Repo: https://github.com/purin-tavilsup/Glimpse (public, MIT). Last updated: 2026-10-01.
 
-## 🚧 IN FLIGHT: cross-platform (macOS + Windows) — branch `feat/cross-platform-windows`
+## ✅ SHIPPED: cross-platform (macOS + Windows) — PR #2, merged 2026-10-01 (`378d243`)
 
-**All 10 tasks and the final-review fix round are done (2026-10-01). Nothing pushed yet.**
-Next: short re-review of the fix round → push → PR. Closes deferred item 7 below.
+**Merged as PR #2.** First CI run green on both legs (147 tests each, RealDesktop excluded).
+Closes deferred item 7 below.
 
 - Spec: `docs/superpowers/specs/2026-08-01-cross-platform-windows-design.md`
 - Plan: `docs/superpowers/plans/2026-08-01-cross-platform-windows.md`
@@ -34,15 +34,18 @@ Suite **143 passed / 0 failed / 2 skipped** on Windows.
 - `ToolLocator` on macOS accepts a file without the exec bit, where `which` did not (review M-5).
 - Untitled windows are now selectable, so without `--title` a visible untitled popup of the same
   app (an open menu, an overlay) in front of the real window would win. None on this box; a later
-  tie-break could prefer the first titled match.
+  tie-break could prefer the first titled match. ⚠️ **Do not add it naively:** on 2026-10-01 the
+  Recorder's untitled sign-in prompt sat in front of its titled "Setting Up…" window and the
+  untitled one was the right capture; "prefer titled" would have picked the wrong window.
 - An existing Windows install with a **non-ASCII** repo path keeps an old-format sidecar that the
   new wrapper rejects; re-run `scripts/install.ps1` once after updating.
 - Pre-existing CLI defects, same on both OSes: `CaptureOptions.Parse` sits outside the try/catch
   (a bad flag prints a stack trace); `outcome with { Warnings }` never recomputes `ExitCode`, so a
   `fullscreen-fallback` warning cannot raise it; the BitBlt fallback fires only when `PrintWindow`
   returns false, not on a single-colour result as spec §3.2 says.
-- `scripts/check-diagram-templates.sh`: `cloud.d2` fails on D2 0.9 — the GCP Container Registry
-  icon uses an SVG style D2's importer rejects. Fix queued: bundle a cleaned copy (Pond's ruling).
+- `scripts/check-diagram-templates.sh`: `cloud.d2` failed on D2 0.9 — three GCP
+  icons (Container Registry, Cloud SQL, Pub/Sub) use an SVG style D2's importer rejects; fixed on
+  branch `fix/d2-cloud-icon` (bundled cleaned copies), not pushed yet.
 
 ## Current state (main): ✅ TWO HALVES SHIPPED + PUBLISHED
 
@@ -115,7 +118,7 @@ derived from Pond's reference diagrams, rendering + verifying via glimpse.
    (`glimpse:glimpse`, `glimpse:diagram-design`) available there. macOS-only. Spec/plan:
    `docs/superpowers/{specs,plans}/2026-06-19-glimpse-distribution*`. (Live `--window
    "Recorder"` capture not run — needs the app running + Screen-Recording permission.)
-7. **🚧 Cross-platform (Windows) — done on the branch; re-review + push pending.** See the section at the top
+7. ~~**Cross-platform (Windows)**~~ — ✅ **DONE, merged as PR #2.** See the section at the top
    of this file. Scope grew beyond the original sketch: full parity including live-window
    capture, from a single `net10.0` target. Note the original note here was wrong on one
    point — `ToolLocator` did **not** become `which`→`where`; it stopped shelling out at all
