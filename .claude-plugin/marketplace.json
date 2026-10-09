@@ -1,0 +1,16 @@
+{
+  "name": "glimpse",
+  "owner": {
+    "name": "Purin Tavilsup"
+  },
+  "metadata": {
+    "description": "Glimpse: let a coding agent see what it builds. Renders diagrams, pages and live app windows to PNGs."
+  },
+  "plugins": [
+    {
+      "name": "glimpse",
+      "source": "./plugin",
+      "description": "Render any UI or diagram to a PNG and design clear diagrams — the glimpse render-loop CLI plus the diagram-design skill."
+    }
+  ]
+}
