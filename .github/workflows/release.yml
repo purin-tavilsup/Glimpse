@@ -16,7 +16,12 @@ on:
 jobs:
   pack:
     name: Verify, test & pack
-    runs-on: ubuntu-latest
+    # Windows, not Linux: Glimpse supports Windows and macOS only, and its PNG tests need SkiaSharp's native
+    # library, which has no Linux build here.
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
     outputs:
       version: ${{ steps.version.outputs.version }}
 
@@ -33,7 +38,7 @@ jobs:
         # version — and on a release, the tag's — or a published plugin would run a different CLI.
         run: |
           CSPROJ=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' tools/Glimpse.Capture/Glimpse.Capture.csproj)
-          PLUGIN=$(jq -r .version plugin/.claude-plugin/plugin.json)
+          PLUGIN=$(sed -n 's|.*"version": *"\([^"]*\)".*|\1|p' plugin/.claude-plugin/plugin.json)
           PIN=$(tr -d '[:space:]' < plugin/bin/glimpse.version)
           echo "csproj=$CSPROJ plugin.json=$PLUGIN glimpse.version=$PIN"
           if [ "$CSPROJ" != "$PLUGIN" ] || [ "$CSPROJ" != "$PIN" ]; then
