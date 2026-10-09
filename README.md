@@ -1,3 +1,5 @@
+<img src="assets/logo-256.png" alt="Glimpse logo" width="96" align="right">
+
 # Glimpse
 
 > A renderer-agnostic **visual-feedback harness**: render any UI or diagram to a PNG, *look* at it, critique, improve, repeat.
@@ -7,6 +9,30 @@ Code agents are good at writing UI and diagrams — but they can't *see* the res
 The judgment stays human (or agent); Glimpse just makes every turn fast, stable, and honest.
 
 ![Glimpse architecture](docs/diagrams/glimpse-architecture.png)
+
+## Install
+
+Requires the **.NET 10 SDK** on Windows or macOS, plus the tool for whichever renderer you use (see
+[Platforms](#platforms)).
+
+**As a Claude Code plugin** (the CLI plus the `glimpse` and `diagram-design` skills):
+
+```
+/plugin install glimpse --marketplace purin-tavilsup/Glimpse
+```
+
+On Claude Code older than 2.1.275, add the marketplace first:
+`/plugin marketplace add purin-tavilsup/Glimpse`, then `/plugin install glimpse@glimpse`.
+
+The plugin pins a released CLI version. Its first run downloads that version from NuGet through
+`dotnet dnx` and later runs use the local copy. On macOS that first run also prints
+`Skipping NuGet package signature verification.` before the output.
+
+**As a .NET tool**, without Claude Code: `dotnet tool install -g Glimpse.Capture`, or run it once with
+`dotnet dnx Glimpse.Capture`. The command is `glimpse`.
+
+**From a clone**, to work on Glimpse itself: `./scripts/install.sh` (macOS) or `./scripts/install.ps1`
+(Windows) links the plugin to your clone, so `glimpse` runs the code you are editing.
 
 ## How it works
 
@@ -29,7 +55,7 @@ underlying mechanism differs, and only for `app`:
 
 | | macOS | Windows |
 |---|---|---|
-| Install | `./scripts/install.sh` (symlink) | `./scripts/install.ps1` (junction — no admin needed; also puts `glimpse` on the user PATH) |
+| Install from a clone | `./scripts/install.sh` (symlink) | `./scripts/install.ps1` (junction — no admin needed; also puts `glimpse` on the user PATH) |
 | `app` capture | `screencapture` | in-process GDI (`PrintWindow`) |
 | Permission needed | Screen Recording, for `app` | none |
 | Diagram tools | `brew install graphviz d2` | `winget install Graphviz.Graphviz Terrastruct.d2` |
@@ -85,8 +111,10 @@ Manifest: /…/.claude/tmp/ui-snapshots/glimpse/manifest.json
 | `--list-windows` | Print the windows (on-screen ones on macOS, every top-level window on Windows) with id, layer and size, then exit |
 | `--prune` | Delete stale PNGs from previous runs |
 | `--no-manifest` | Don't write `manifest.json` — handy for one-off renders into a folder you don't want cluttered (e.g. `docs/`) |
+| `-h`, `--help` | Print usage, then exit |
+| `--version` | Print the CLI version, then exit |
 
-**Exit codes:** `0` rendered clean · `1` rendered with warnings · `2` render failed.
+**Exit codes:** `0` rendered clean · `1` rendered with warnings · `2` render failed or bad arguments.
 
 ## The agent loop
 
