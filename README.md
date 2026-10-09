@@ -31,8 +31,9 @@ The plugin pins a released CLI version. Its first run downloads that version fro
 **As a .NET tool**, without Claude Code: `dotnet tool install -g Glimpse.Capture`, or run it once with
 `dotnet dnx Glimpse.Capture`. The command is `glimpse`.
 
-**From a clone**, to work on Glimpse itself: `./scripts/install.sh` (macOS) or `./scripts/install.ps1`
-(Windows) links the plugin to your clone, so `glimpse` runs the code you are editing.
+**From a clone**, to work on Glimpse itself: `./scripts/install.sh` (macOS, a symlink) or
+`./scripts/install.ps1` (Windows, a junction, so no admin needed; it also puts `glimpse` on your user
+PATH) links the plugin to your clone, so `glimpse` runs the code you are editing.
 
 ## How it works
 
@@ -55,7 +56,6 @@ underlying mechanism differs, and only for `app`:
 
 | | macOS | Windows |
 |---|---|---|
-| Install from a clone | `./scripts/install.sh` (symlink) | `./scripts/install.ps1` (junction — no admin needed; also puts `glimpse` on the user PATH) |
 | `app` capture | `screencapture` | in-process GDI (`PrintWindow`) |
 | Permission needed | Screen Recording, for `app` | none |
 | Diagram tools | `brew install graphviz d2` | `winget install Graphviz.Graphviz Terrastruct.d2` |
@@ -68,20 +68,20 @@ passes; it does not prove live capture, which needs a real desktop and is verifi
 
 ## Quick start
 
-Requires **.NET 10** and the tool for whichever renderer you use (the CLI fails fast with an install hint if one is missing).
+If a renderer's tool is missing, the CLI stops with a hint on how to install it.
 
 ```bash
 # Render a mermaid diagram (renderer inferred from .mmd)
-dotnet run --project tools/Glimpse.Capture -- diagram.mmd --name my-diagram
+glimpse diagram.mmd --name my-diagram
 
 # Explicit renderer, dark theme, custom size
-dotnet run --project tools/Glimpse.Capture -- page.html --renderer web --theme dark --size 1440x900
+glimpse page.html --renderer web --theme dark --size 1440x900
 
 # Screenshot a live app window by name (macOS and Windows)
-dotnet run --project tools/Glimpse.Capture -- --renderer app --window "Chrome" --name app-shot
+glimpse --renderer app --window "Chrome" --name app-shot
 
 # List capturable windows and their ids
-dotnet run --project tools/Glimpse.Capture -- --list-windows
+glimpse --list-windows
 ```
 
 The target window must be visible and not minimized. `--list-windows` marks the rows `--window`
@@ -118,7 +118,9 @@ Manifest: /…/.claude/tmp/ui-snapshots/glimpse/manifest.json
 
 ## The agent loop
 
-Glimpse ships a [`glimpse` skill](plugin/skills/glimpse/SKILL.md) that packages the loop for coding agents:
+The plugin ships two skills: [`diagram-design`](plugin/skills/diagram-design/SKILL.md) helps an agent
+design a clear diagram, and [`glimpse`](plugin/skills/glimpse/SKILL.md) packages the loop that checks it
+(or any UI):
 
 1. **Render** the source to a PNG.
 2. **Read** the PNG — actually look at it.
@@ -139,10 +141,16 @@ src/
                                  manifest + output writer
   Glimpse.Avalonia*/             headless Avalonia rendering engine (optional renderer)
 tools/
-  Glimpse.Capture/               the CLI
+  Glimpse.Capture/               the CLI, packed as the Glimpse.Capture .NET tool
+plugin/                          the Claude Code plugin: bin/ wrappers + the two skills
+.claude-plugin/                  marketplace manifest, so the repo is installable
+samples/
+  Glimpse.ScratchConsole/        scratch app for trying the Avalonia renderer
+scripts/                         clone installers + a diagram-template check
 tests/                           xUnit suites incl. a real end-to-end render gate
+assets/                          logo
 docs/
-  superpowers/                   design spec + implementation plan
+  superpowers/                   design specs + implementation plans
   diagrams/                      architecture diagram (source + rendered PNG)
 ```
 
@@ -152,10 +160,19 @@ docs/
 
 ```bash
 dotnet build Glimpse.slnx
-dotnet test
+dotnet test Glimpse.slnx
 ```
 
 The test suite includes a real mermaid end-to-end gate that renders an actual diagram and asserts it's non-blank (it skips automatically if `mmdc` isn't installed).
+Tests in `Category=RealDesktop` capture real windows, so they need a desktop session; CI runs
+`--filter "Category!=RealDesktop"`.
+
+## Releasing
+
+Set the same version in `tools/Glimpse.Capture/Glimpse.Capture.csproj`, `plugin/.claude-plugin/plugin.json`
+and `plugin/bin/glimpse.version`, merge, then push a `v<version>` tag. The release workflow refuses
+mismatched versions, runs the tests, checks the package through `dotnet dnx` on Windows and macOS, and
+publishes it to NuGet.
 
 ## License
 
