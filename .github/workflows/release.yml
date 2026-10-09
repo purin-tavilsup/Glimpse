@@ -89,11 +89,21 @@ jobs:
 
       - name: Run the packed tool the way the plugin does
         shell: bash
+        env:
+          VERSION: ${{ needs.pack.outputs.version }}
+        # On macOS the run that downloads the package first prints "Skipping NuGet package signature
+        # verification." on stdout, so the first run is judged by its last line. Callers parse the output of
+        # every later run, so the second run must print the version and nothing else.
         run: |
-          OUT=$(dotnet dnx "Glimpse.Capture@${{ needs.pack.outputs.version }}" --yes --add-source feed -- --version)
-          echo "glimpse --version: $OUT"
-          if [ "$OUT" != "${{ needs.pack.outputs.version }}" ]; then
-            echo "::error::Expected ${{ needs.pack.outputs.version }}, got '$OUT'"
+          FIRST=$(dotnet dnx "Glimpse.Capture@$VERSION" --yes --add-source feed -- --version)
+          SECOND=$(dotnet dnx "Glimpse.Capture@$VERSION" --yes --add-source feed -- --version)
+          printf 'first run:\n%s\nsecond run:\n%s\n' "$FIRST" "$SECOND"
+          if [ "$(printf '%s\n' "$FIRST" | tail -n 1)" != "$VERSION" ]; then
+            echo "::error::First run did not end with $VERSION"
+            exit 1
+          fi
+          if [ "$SECOND" != "$VERSION" ]; then
+            echo "::error::Second run printed more than $VERSION: '$SECOND'"
             exit 1
           fi
 
