@@ -24,6 +24,7 @@ if not defined REPO for %%I in ("%BIN%..\..") do set "REPO=%%~fI"
 
 set "PROJECT=%REPO%\tools\Glimpse.Capture\Glimpse.Capture.csproj"
 set "DLL=%REPO%\tools\Glimpse.Capture\bin\Debug\net10.0\Glimpse.Capture.dll"
+if not exist "%PROJECT%" goto run_release
 
 if not exist "%DLL%" (
     dotnet build "%PROJECT%" -v quiet 1>&2
@@ -31,6 +32,17 @@ if not exist "%DLL%" (
 )
 
 dotnet "%DLL%" %*
+exit /b %errorlevel%
+
+rem No clone to build from, as in a marketplace install: run the released tool this plugin pins.
+rem --yes skips dnx's download prompt, which would hang a non-interactive caller.
+:run_release
+set /p VERSION=<"%BIN%glimpse.version"
+where dotnet >nul 2>&1 || (
+    echo glimpse: needs the .NET 10 SDK ^(dotnet on PATH^): https://dot.net 1>&2
+    exit /b 127
+)
+dotnet dnx "Glimpse.Capture@%VERSION%" --yes -- %*
 exit /b %errorlevel%
 
 rem The sidecar is UTF-8 and `set /p` decodes in the console code page, so the read runs
