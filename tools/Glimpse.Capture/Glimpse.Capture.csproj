@@ -10,7 +10,7 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>glimpse</ToolCommandName>
     <PackageId>Glimpse.Capture</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Authors>Purin Tavilsup</Authors>
     <Description>Render any UI or diagram to a PNG so an agent can see it, critique it, and iterate.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
