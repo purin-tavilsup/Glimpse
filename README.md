@@ -32,7 +32,7 @@ The plugin pins a released CLI version. Its first run downloads that version fro
 
 **From a clone**, to work on Glimpse itself: `./scripts/install.sh` (macOS, a symlink) or
 `./scripts/install.ps1` (Windows, a junction, so no admin needed; it also puts `glimpse` on your user
-PATH) links the plugin to your clone, so `glimpse` runs the code you are editing.
+PATH) links the plugin to your clone, so `glimpse` runs the code you are editing: it rebuilds whenever the source changed.
 
 ## How it works
 
