@@ -76,8 +76,9 @@ exit 2. The release smoke test uses `--version` to prove the right package ran.
 Modelled on Nokpirab's:
 1. Verify tag == the three versions (§4.2).
 2. Restore, build, test (as CI), pack to `artifacts/`.
-3. **Smoke test on `windows-latest` and `macos-latest`:** `dotnet dnx Glimpse.Capture@<v> --yes --add-source artifacts
-   -- --version` prints `<v>`. Desktop capture is not tested here (CI runners have no interactive desktop).
+3. **Smoke test on `windows-latest` and `macos-latest`:** the plugin's own wrapper, run from a copy of `plugin/` with
+   NuGet pointed at the packed feed, prints exactly `<v>` for `--version` on its first and second run. Desktop
+   capture is not tested here (CI runners have no interactive desktop).
 4. `NuGet/login@v1` (Trusted Publishing, `id-token: write`, user `Exconeer`) immediately before
    `dotnet nuget push --skip-duplicate`.
 
@@ -106,4 +107,4 @@ Then, by the owner: create the Trusted Publishing policy on nuget.org (owner `Ex
 | The repo moves to an organisation after the policy exists | Trusted Publishing is tied to owner/repo/workflow — update the policy right after the transfer |
 | First run with no network | `dnx` needs NuGet once; afterwards it runs from the cache |
 | macOS `dnx` behaviour differs | Covered by the macOS smoke job before every publish |
-| On macOS the run that downloads the package prints `Skipping NuGet package signature verification.` before the output | Found by the first macOS smoke run. Only that first run: the smoke test requires later runs to print only the tool's output, and the README tells users. Recheck once the package comes from nuget.org |
+| On macOS the run that downloads the package prints `Skipping NuGet package signature verification.` on stdout, before the output (also for the nuget.org package) | The bash wrapper downloads the package in a silent run first. The release smoke test runs the real wrappers from a plugin-only copy and requires every run, the first included, to print only the version |
