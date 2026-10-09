@@ -1,7 +1,9 @@
 using Glimpse.Capture;
 using Glimpse.Core;
 
-var options = CaptureOptions.Parse(args);
+var start = Cli.Start(args, Console.Out, Console.Error);
+if (start.Options is not { } options)
+    return start.ExitCode;
 
 if (options.ListWindows)
 {

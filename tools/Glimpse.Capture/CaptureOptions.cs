@@ -16,7 +16,9 @@ public sealed record CaptureOptions(
     bool Prune,
     bool NoManifest,
     bool ListWindows,
-    bool CheckIcons)
+    bool CheckIcons,
+    bool Help,
+    bool Version)
 {
     public static CaptureOptions Parse(string[] args)
     {
@@ -28,6 +30,8 @@ public sealed record CaptureOptions(
         var noManifest = false;
         var listWindows = false;
         var checkIcons = false;
+        var help = false;
+        var version = false;
         var hasWindowId = false;
 
         for (var i = 0; i < args.Length; i++)
@@ -51,6 +55,8 @@ public sealed record CaptureOptions(
                 case "--no-manifest": noManifest = true; break;
                 case "--list-windows": listWindows = true; break;
                 case "--check-icons": checkIcons = true; break;
+                case "--help" or "-h": help = true; break;
+                case "--version": version = true; break;
                 case "--size": (width, height) = SizeFor(Next(args, ref i)); break;
                 default:
                     if (arg.StartsWith('-'))
@@ -66,7 +72,7 @@ public sealed record CaptureOptions(
                 : renderer ?? "snapshot");
 
         return new CaptureOptions(source, renderer, resolvedName, outDir, width, height, theme,
-            hasWindowId ? windowId : null, window, title, prune, noManifest, listWindows, checkIcons);
+            hasWindowId ? windowId : null, window, title, prune, noManifest, listWindows, checkIcons, help, version);
     }
 
     private static string Slug(string value)
