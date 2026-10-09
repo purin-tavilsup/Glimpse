@@ -24,6 +24,14 @@ fi
 if [ ! -f "$project" ]; then
     # --yes skips dnx's download prompt, which would hang a non-interactive caller.
     version="$(tr -d '[:space:]' < "$bin_dir/glimpse.version")"
+
+    # On macOS, the dnx run that downloads the package prints a NuGet signature notice on stdout, ahead of
+    # Glimpse's own output, which callers parse. A silent run downloads it first. NuGet lowercases the
+    # cache folder names; `tr` rather than ${var,,} because macOS ships bash 3.2.
+    cached="${NUGET_PACKAGES:-$HOME/.nuget/packages}/glimpse.capture/$(printf '%s' "$version" | tr '[:upper:]' '[:lower:]')"
+    if [ ! -d "$cached" ]; then
+        dotnet dnx "Glimpse.Capture@$version" --yes -- --version >/dev/null 2>&1 || true
+    fi
     exec dotnet dnx "Glimpse.Capture@$version" --yes -- "$@"
 fi
 
