@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Glimpse CLI on PATH (via the plugin's bin/). Resolves this script's REAL location
 # through the install symlink — without `readlink -f` (unsupported on macOS) — then runs
-# the in-repo built DLL so it's always current. Builds once if the DLL is missing.
+# the in-repo built DLL, rebuilding it when the source changed so it's always current.
 # With no clone around it (a marketplace install), it runs the released tool this plugin pins.
 set -euo pipefail
 
@@ -35,5 +35,16 @@ if [ ! -f "$project" ]; then
     exec dotnet dnx "Glimpse.Capture@$version" --yes -- "$@"
 fi
 
-[ -f "$dll" ] || dotnet build "$project" -v quiet >&2
+# Rebuild when a source file changed since the last build, so a pull or an edit goes live. A stamp, not the DLL,
+# marks the build: a change that leaves a dependency's public API alone can leave the DLL untouched, which would
+# make every later call rebuild.
+stamp="$repo/tools/Glimpse.Capture/obj/glimpse-wrapper.stamp"
+if [ ! -f "$dll" ] || [ ! -f "$stamp" ] || [ -n "$(
+    find "$repo/tools/Glimpse.Capture" "$repo/src" \( -name '*.cs' -o -name '*.csproj' -o -name '*.props' \) \
+        -not -path '*/bin/*' -not -path '*/obj/*' -newer "$stamp" -print -quit
+    find "$repo" -maxdepth 1 -name 'Directory.*.props' -newer "$stamp" -print -quit
+)" ]; then
+    dotnet build "$project" -v quiet >&2
+    touch "$stamp"
+fi
 exec dotnet "$dll" "$@"
