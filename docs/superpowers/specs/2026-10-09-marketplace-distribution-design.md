@@ -2,7 +2,7 @@
 
 > Status: **Design / spec** (agreed 2026-10-09)
 > Author: Pond + Claude
-> Goal: anyone — a whole team, on Windows or macOS — installs Glimpse with one `/plugin install`, and every
+> Goal: anyone, on Windows or macOS, installs Glimpse with one `/plugin install`, and every
 > machine runs the same released CLI. Realises "Option C" from
 > [`2026-06-19-glimpse-distribution-design.md` §9](2026-06-19-glimpse-distribution-design.md).
 
@@ -12,7 +12,7 @@ Today the plugin works only on a machine with a clone: `plugin/bin/glimpse` (and
 from this repo's source, and `install.sh` / `install.ps1` link `~/.claude/skills/glimpse` to `plugin/`. A
 marketplace install copies just the plugin, so there is no source to build and `glimpse` fails.
 
-The pull is a team that wants agent-driven UI testing out of the box on both OSes, with every agent seeing the same
+Anyone driving and checking UIs with an agent should get this out of the box on both OSes, with every machine seeing the same
 Glimpse. It should depend on a released open-source tool, not on someone's clone.
 
 ## 2. Goals / Non-Goals
@@ -85,7 +85,7 @@ Modelled on Nokpirab's:
 
 `.claude-plugin/marketplace.json` at the repo root lists the `glimpse` plugin with `"source": "./plugin"`, so
 `/plugin marketplace add <owner>/Glimpse` then `/plugin install glimpse@<marketplace-name>` works. Another marketplace
-(e.g. a company's) can list the plugin with a `git-subdir` source, `"path": "plugin"`, pinned by `ref`/`sha`.
+can list the plugin with a `git-subdir` source, `"path": "plugin"`, pinned by `ref`/`sha`.
 
 ## 5. Delivery — one PR each
 
