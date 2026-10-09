@@ -1,6 +1,6 @@
 @echo off
-rem Glimpse CLI on PATH (via the plugin's bin/). Runs the in-repo built DLL so it is
-rem always current; builds once if the DLL is missing.
+rem Glimpse CLI on PATH (via the plugin's bin/). Runs the in-repo built DLL, rebuilding it
+rem when the source changed so it is always current.
 rem
 rem A junction is transparent to lexical ".." traversal, so from the installed location
 rem (~/.claude/skills/glimpse/bin) "..\..\" resolves to ~/.claude/skills, NOT the repo.
@@ -26,9 +26,12 @@ set "PROJECT=%REPO%\tools\Glimpse.Capture\Glimpse.Capture.csproj"
 set "DLL=%REPO%\tools\Glimpse.Capture\bin\Debug\net10.0\Glimpse.Capture.dll"
 if not exist "%PROJECT%" goto run_release
 
-if not exist "%DLL%" (
+rem glimpse-stale.ps1 decides whether to rebuild; the stamp it reads marks a finished build.
+powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%BIN%glimpse-stale.ps1" -Repo "%REPO%" >nul 2>&1
+if errorlevel 1 (
     dotnet build "%PROJECT%" -v quiet 1>&2
     if errorlevel 1 exit /b 1
+    type nul > "%REPO%\tools\Glimpse.Capture\obj\glimpse-wrapper.stamp"
 )
 
 dotnet "%DLL%" %*
