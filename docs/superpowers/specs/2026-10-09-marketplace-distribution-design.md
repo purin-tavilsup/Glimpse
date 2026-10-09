@@ -106,3 +106,4 @@ Then, by the owner: create the Trusted Publishing policy on nuget.org (owner `Ex
 | The repo moves to an organisation after the policy exists | Trusted Publishing is tied to owner/repo/workflow — update the policy right after the transfer |
 | First run with no network | `dnx` needs NuGet once; afterwards it runs from the cache |
 | macOS `dnx` behaviour differs | Covered by the macOS smoke job before every publish |
+| On macOS the run that downloads the package prints `Skipping NuGet package signature verification.` before the output | Found by the first macOS smoke run. Only that first run: the smoke test requires later runs to print only the tool's output, and the README tells users. Recheck once the package comes from nuget.org |
