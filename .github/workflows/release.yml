@@ -1,0 +1,128 @@
+name: Release
+
+# A v* tag publishes the CLI to nuget.org. Pull requests that touch the packaging run everything except the
+# publish, so the dnx path the plugin relies on is proven on both OSes before a release ever depends on it.
+on:
+  push:
+    tags: [ 'v*' ]
+  pull_request:
+    paths:
+      - '.github/workflows/release.yml'
+      - 'plugin/**'
+      - 'tools/Glimpse.Capture/**'
+      - 'src/**'
+      - 'Directory.*.props'
+
+jobs:
+  pack:
+    name: Verify, test & pack
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Verify versions agree
+        id: version
+        # The plugin pins the version it runs, so the package, the plugin manifest and the pin must be one
+        # version — and on a release, the tag's — or a published plugin would run a different CLI.
+        run: |
+          CSPROJ=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' tools/Glimpse.Capture/Glimpse.Capture.csproj)
+          PLUGIN=$(jq -r .version plugin/.claude-plugin/plugin.json)
+          PIN=$(tr -d '[:space:]' < plugin/bin/glimpse.version)
+          echo "csproj=$CSPROJ plugin.json=$PLUGIN glimpse.version=$PIN"
+          if [ "$CSPROJ" != "$PLUGIN" ] || [ "$CSPROJ" != "$PIN" ]; then
+            echo "::error::Versions differ: csproj $CSPROJ, plugin.json $PLUGIN, glimpse.version $PIN"
+            exit 1
+          fi
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "${GITHUB_REF_NAME#v}" != "$CSPROJ" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match version $CSPROJ"
+            exit 1
+          fi
+          echo "version=$CSPROJ" >> "$GITHUB_OUTPUT"
+
+      - name: Restore
+        run: dotnet restore Glimpse.slnx
+
+      - name: Build
+        run: dotnet build Glimpse.slnx --no-restore -c Release -p:ContinuousIntegrationBuild=true
+
+      - name: Test
+        run: dotnet test Glimpse.slnx --no-build -c Release --filter "Category!=RealDesktop"
+
+      - name: Pack
+        run: dotnet pack tools/Glimpse.Capture --no-build -c Release -p:ContinuousIntegrationBuild=true --output artifacts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nupkg
+          path: artifacts/*.nupkg
+
+  smoke:
+    name: dnx smoke test (${{ matrix.os }})
+    needs: pack
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: nupkg
+          path: feed
+
+      - name: Run the packed tool the way the plugin does
+        shell: bash
+        run: |
+          OUT=$(dotnet dnx "Glimpse.Capture@${{ needs.pack.outputs.version }}" --yes --add-source feed -- --version)
+          echo "glimpse --version: $OUT"
+          if [ "$OUT" != "${{ needs.pack.outputs.version }}" ]; then
+            echo "::error::Expected ${{ needs.pack.outputs.version }}, got '$OUT'"
+            exit 1
+          fi
+
+  publish:
+    name: Publish to NuGet
+    needs: [pack, smoke]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Lets the job request a signed OIDC token, which nuget.org exchanges for a short-lived API key.
+      id-token: write
+
+    steps:
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: nupkg
+          path: artifacts
+
+      # Requested right before the push: the key it returns is valid for one hour.
+      - name: NuGet login (OIDC to short-lived API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          # The nuget.org profile that owns the Trusted Publishing policy for this repository.
+          user: Exconeer
+
+      - name: Push
+        run: >
+          dotnet nuget push "artifacts/*.nupkg"
+          --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
