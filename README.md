@@ -25,8 +25,7 @@ On Claude Code older than 2.1.275, add the marketplace first:
 `/plugin marketplace add purin-tavilsup/Glimpse`, then `/plugin install glimpse@glimpse`.
 
 The plugin pins a released CLI version. Its first run downloads that version from NuGet through
-`dotnet dnx` and later runs use the local copy. On macOS that first run also prints
-`Skipping NuGet package signature verification.` before the output.
+`dotnet dnx` and later runs use the local copy.
 
 **As a .NET tool**, without Claude Code: `dotnet tool install -g Glimpse.Capture`, or run it once with
 `dotnet dnx Glimpse.Capture`. The command is `glimpse`.

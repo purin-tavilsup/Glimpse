@@ -69,7 +69,7 @@ jobs:
           path: artifacts/*.nupkg
 
   smoke:
-    name: dnx smoke test (${{ matrix.os }})
+    name: Plugin smoke test (${{ matrix.os }})
     needs: pack
     runs-on: ${{ matrix.os }}
     strategy:
@@ -78,6 +78,8 @@ jobs:
         os: [windows-latest, macos-latest]
 
     steps:
+      - uses: actions/checkout@v7
+
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
@@ -87,25 +89,36 @@ jobs:
           name: nupkg
           path: feed
 
-      - name: Run the packed tool the way the plugin does
+      # A copy of plugin/ alone is what a marketplace install gets, so the wrapper finds no source to build
+      # and runs the packed tool through dotnet dnx, from this feed only.
+      - name: Run the packed tool through the plugin's own wrapper
         shell: bash
         env:
           VERSION: ${{ needs.pack.outputs.version }}
-        # On macOS the run that downloads the package first prints "Skipping NuGet package signature
-        # verification." on stdout, so the first run is judged by its last line. Callers parse the output of
-        # every later run, so the second run must print the version and nothing else.
+        # Callers parse Glimpse's stdout, so every run, the downloading one included, must print the version
+        # and nothing else.
         run: |
-          FIRST=$(dotnet dnx "Glimpse.Capture@$VERSION" --yes --add-source feed -- --version)
-          SECOND=$(dotnet dnx "Glimpse.Capture@$VERSION" --yes --add-source feed -- --version)
+          MKT="$RUNNER_TEMP/marketplace-copy"
+          mkdir -p "$MKT" && cp -R plugin "$MKT/plugin"
+          cat > "$MKT/NuGet.config" <<EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration><packageSources><clear /><add key="feed" value="$GITHUB_WORKSPACE/feed" /></packageSources></configuration>
+          EOF
+          cd "$MKT"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            glimpse() { cmd.exe //d //c "plugin\\bin\\glimpse.cmd $*"; }
+          else
+            glimpse() { plugin/bin/glimpse "$@"; }
+          fi
+          FIRST=$(glimpse --version)
+          SECOND=$(glimpse --version)
           printf 'first run:\n%s\nsecond run:\n%s\n' "$FIRST" "$SECOND"
-          if [ "$(printf '%s\n' "$FIRST" | tail -n 1)" != "$VERSION" ]; then
-            echo "::error::First run did not end with $VERSION"
-            exit 1
-          fi
-          if [ "$SECOND" != "$VERSION" ]; then
-            echo "::error::Second run printed more than $VERSION: '$SECOND'"
-            exit 1
-          fi
+          for OUT in "$FIRST" "$SECOND"; do
+            if [ "$OUT" != "$VERSION" ]; then
+              echo "::error::Expected exactly $VERSION, got '$OUT'"
+              exit 1
+            fi
+          done
 
   publish:
     name: Publish to NuGet
