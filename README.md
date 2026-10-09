@@ -174,6 +174,12 @@ and `plugin/bin/glimpse.version`, merge, then push a `v<version>` tag. The relea
 mismatched versions, runs the tests, checks the package through `dotnet dnx` on Windows and macOS, and
 publishes it to NuGet.
 
+Push the tag straight after merging the version bump: the plugin on `main` already pins the new version,
+so a fresh install fails with "not found" until it is on NuGet. nuget.org also lists a new version in
+stages, and `dnx` finds it only at the last one. For 0.1.0 that took about ten minutes after publishing.
+NuGet's local HTTP cache can keep an earlier "not found" for about half an hour, so when checking a
+release, point `NUGET_HTTP_CACHE_PATH` at an empty folder.
+
 ## License
 
 [MIT](LICENSE) © 2026 Purin Tavilsup
