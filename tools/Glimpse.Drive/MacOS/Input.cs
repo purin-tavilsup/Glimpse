@@ -25,15 +25,19 @@ internal static class Input
         Thread.Sleep(50);
     }
 
-    /// <summary>Types text as Unicode keystrokes, so it needs no key code for each character.</summary>
+    /// <summary>
+    /// Types text as Unicode keystrokes, so it needs no key code for each character. One keystroke per code
+    /// point, so a character outside the Basic Multilingual Plane arrives whole rather than as two halves.
+    /// </summary>
     public static void Text(int pid, string text)
     {
-        foreach (var character in text)
+        foreach (var rune in text.EnumerateRunes())
         {
+            var character = rune.ToString();
             foreach (var down in new[] { true, false })
             {
                 using var keystroke = Native.CGEventCreateKeyboardEvent(IntPtr.Zero, 0, down);
-                Native.CGEventKeyboardSetUnicodeString(keystroke, 1, character.ToString());
+                Native.CGEventKeyboardSetUnicodeString(keystroke, (nuint)character.Length, character);
                 Native.CGEventPostToPid(pid, keystroke);
             }
         }
