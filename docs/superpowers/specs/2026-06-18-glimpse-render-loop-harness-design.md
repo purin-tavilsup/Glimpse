@@ -139,7 +139,7 @@ PNG, judges, edits the source, re-runs.
 ## 7. Avalonia Engine + the PNG Analyser
 
 - **Avalonia engine: parked, not deleted.** It is merged, tested, and still serves the
-  future Recorder-preview consumer. It does not fit "command → PNG" (in-process
+  future app-preview consumer. It does not fit "command → PNG" (in-process
   render), but `Glimpse.ScratchConsole` *already is* a CLI that renders scenes to PNG
   — so if ever wanted, Avalonia plugs in as just another command-renderer. **Decision:
   don't extend it, don't tear it out.** The new harness is the center of gravity.

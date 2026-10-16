@@ -21,7 +21,7 @@ distribution: `glimpse.cmd`, `install.ps1` (junction, no admin), `PackAsTool`. C
 `windows-latest` × `macos-latest`; desktop-bound tests are `Category=RealDesktop` and run locally
 only. `--list-windows` marks rows `WindowSelector.IsSelectable` rejects. Docs are per-platform.
 
-**Final-review fix round (2026-10-01):** untitled windows are listed (the Recorder's Avalonia
+**Final-review fix round (2026-10-01):** untitled windows are listed (an Avalonia app's
 prompt has `Title=""` and was invisible); the engine waits for a PNG a tool writes just after it
 exits (headless Chrome on Windows, ~1 in 5 renders); `web` passes Chrome a `file://` URL, so a
 relative source works; the sidecar is UTF-8 read under code page 65001 and the installer checks
@@ -35,7 +35,7 @@ Suite **143 passed / 0 failed / 2 skipped** on Windows.
 - Untitled windows are now selectable, so without `--title` a visible untitled popup of the same
   app (an open menu, an overlay) in front of the real window would win. None on this box; a later
   tie-break could prefer the first titled match. ⚠️ **Do not add it naively:** on 2026-10-01 the
-  Recorder's untitled sign-in prompt sat in front of its titled "Setting Up…" window and the
+  MyApp's untitled sign-in prompt sat in front of its titled "Setting Up…" window and the
   untitled one was the right capture; "prefer titled" would have picked the wrong window.
 - An existing Windows install with a **non-ASCII** repo path keeps an old-format sidecar that the
   new wrapper rejects; re-run `scripts/install.ps1` once after updating.
@@ -111,13 +111,13 @@ derived from Pond's reference diagrams, rendering + verifying via glimpse.
    no integration test over `Program.cs` manifest-write path.
 5. Polish: dynamic-view (numbered-badge) exemplar; cloud template labels GCP "Container
    Registry" icon as "Artifact Registry" (closest match).
-6. ~~Distribution~~ — ✅ **DONE + verified from Recorder.** Option B (skills-directory plugin
+6. ~~Distribution~~ — ✅ **DONE + verified from MyApp.** Option B (skills-directory plugin
    `plugin/`, symlinked into `~/.claude/skills/glimpse` via `scripts/install.sh`, no
    marketplace). `glimpse --check-icons` folds in the old script. **Verified from
-   `~/dev/Recorder`:** `glimpse` on PATH, a diagram rendered to a real PNG, and both skills
+   `~/dev/MyApp`:** `glimpse` on PATH, a diagram rendered to a real PNG, and both skills
    (`glimpse:glimpse`, `glimpse:diagram-design`) available there. macOS-only. Spec/plan:
    `docs/superpowers/{specs,plans}/2026-06-19-glimpse-distribution*`. (Live `--window
-   "Recorder"` capture not run — needs the app running + Screen-Recording permission.)
+   "MyApp"` capture not run — needs the app running + Screen-Recording permission.)
 7. ~~**Cross-platform (Windows)**~~ — ✅ **DONE, merged as PR #2.** See the section at the top
    of this file. Scope grew beyond the original sketch: full parity including live-window
    capture, from a single `net10.0` target. Note the original note here was wrong on one
@@ -136,7 +136,7 @@ derived from Pond's reference diagrams, rendering + verifying via glimpse.
 - **Windows (added 2026-08-01):** `mmdc` 11.16.0 (npm, lands as `mmdc.cmd`), `d2` v0.7.1 and
   `dot` 15.1.0 (winget). **Graphviz's `bin\` was appended to the user PATH by hand — winget
   does not do it.** Chrome + Edge present.
-- ⚠️ This repo had **no local git identity**, so it was inheriting the Mimica work identity
+- ⚠️ This repo had **no local git identity**, so it was inheriting a work identity
   into a *public personal* repo. A local override is now set to
   `Purin Tavilsup <19279956+purin-tavilsup@users.noreply.github.com>`, matching every prior
   commit — but **a fresh clone reverts**, so re-set it.

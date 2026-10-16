@@ -19,7 +19,7 @@
 - **No behaviour change on macOS.** The `screencapture` argument list and `WindowSelector` semantics must stay identical.
 - **Test naming:** `Method_Condition_ShouldExpectedBehavior`. Arrange/Act/Assert separated by blank lines. No `#region`.
 - **Functions ≤20 lines, ≤3 parameters, do one thing.** Group related parameters into a `record` rather than adding a fourth.
-- **Commit identity:** this repo has a local override (`Purin Tavilsup <19279956+purin-tavilsup@users.noreply.github.com>`). Do not change it; do not commit as the Mimica identity.
+- **Commit identity:** this repo has a local override (`Purin Tavilsup <19279956+purin-tavilsup@users.noreply.github.com>`). Do not change it; do not commit as a work identity.
 - **Verify before claiming.** Every task's final step runs the real command and reads the real output.
 
 **Baseline, measured on Windows 11 on 2026-08-01 before any change:**
@@ -882,7 +882,7 @@ macOS regression is unambiguously attributable."
 
 ### Task 5: `WindowsWindowFinder`
 
-Enumerates top-level windows so `--window "Recorder"` and `--list-windows` work. `WindowSelector` is **not** touched — Windows is mapped onto its existing contract.
+Enumerates top-level windows so `--window "MyApp"` and `--list-windows` work. `WindowSelector` is **not** touched — Windows is mapped onto its existing contract.
 
 **Files:**
 - Modify: `src/Glimpse.Core/WindowFinder.cs` (append the new class)
@@ -978,11 +978,11 @@ Append to `tests/Glimpse.Core.Tests/WindowSelectorTests.cs` — these are pure a
         // macOS-shaped filter excludes it without WindowSelector needing to change.
         var windows = new[]
         {
-            Win(50, "Recorder", "tooltip", layer: 1),
-            Win(51, "Recorder", "Mimica Recorder", w: 1400, h: 900),
+            Win(50, "MyApp", "tooltip", layer: 1),
+            Win(51, "MyApp", "My App", w: 1400, h: 900),
         };
 
-        var result = WindowSelector.SelectFrontmost(windows, "Recorder");
+        var result = WindowSelector.SelectFrontmost(windows, "MyApp");
 
         Assert.Equal(51L, result!.WindowId);
     }
@@ -992,11 +992,11 @@ Append to `tests/Glimpse.Core.Tests/WindowSelectorTests.cs` — these are pure a
     {
         var windows = new[]
         {
-            Win(60, "Recorder", "ghost", onScreen: false),   // DWM-cloaked
-            Win(61, "Recorder", "Mimica Recorder", w: 1400, h: 900),
+            Win(60, "MyApp", "ghost", onScreen: false),   // DWM-cloaked
+            Win(61, "MyApp", "My App", w: 1400, h: 900),
         };
 
-        var result = WindowSelector.SelectFrontmost(windows, "Recorder");
+        var result = WindowSelector.SelectFrontmost(windows, "MyApp");
 
         Assert.Equal(61L, result!.WindowId);
     }

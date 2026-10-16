@@ -1,30 +1,30 @@
-# Glimpse Distribution (use anywhere, incl. Recorder) — Design
+# Glimpse Distribution (use anywhere, incl. MyApp) — Design
 
 > Status: **Design / spec** (brainstormed + approved 2026-06-19; revised to the
 > skills-directory-plugin approach after exploring Claude Code's plugin system)
 > Author: Pond + Claude
 > Goal: use the `glimpse` + `diagram-design` skills (and the Glimpse CLI) from *any*
-> repo on this machine — Recorder in particular — without copying or path hacks.
+> repo on this machine — MyApp in particular — without copying or path hacks.
 
 ## 1. Problem & Motivation
 
 The `glimpse` and `diagram-design` skills live in this repo's `.claude/skills/` and call
 repo-relative paths (`./scripts/glimpse`, `dotnet run --project tools/Glimpse.Capture`,
 `./scripts/check-d2-icons.sh`). So they only work *inside* the Glimpse repo. To get value
-in Recorder (and elsewhere) we need the CLI on `PATH` and the skills available globally,
+in MyApp (and elsewhere) we need the CLI on `PATH` and the skills available globally,
 while keeping this repo the single source of truth.
 
 **Key scoping insight (from brainstorm):** the high-value uses need *zero* coupling to
-Recorder's code — making diagrams (diagram-design) and screenshotting the *running*
-Recorder app (`glimpse --renderer app --window "Recorder"`) both work with only
-distribution. The headless render of Recorder's own Avalonia components (the "preview
+MyApp's code — making diagrams (diagram-design) and screenshotting the *running*
+MyApp (`glimpse --renderer app --window "MyApp"`) both work with only
+distribution. The headless render of MyApp's own Avalonia components (the "preview
 console") is a separate, still-deferred problem and is **out of scope** here.
 
 ## 2. Goals / Non-Goals
 
 ### Goals
 - `glimpse` available as a command on `PATH` from any directory.
-- `glimpse` and `diagram-design` skills available in every repo (incl. Recorder).
+- `glimpse` and `diagram-design` skills available in every repo (incl. MyApp).
 - This repo stays the **single source of truth**; skill edits go live with no re-sync.
 - Skills + CLI ship as **one unit**, installed with a single idempotent command.
 - No marketplace needed.
@@ -32,7 +32,7 @@ console") is a separate, still-deferred problem and is **out of scope** here.
 ### Non-Goals (explicit)
 - **Windows support** — macOS-only for now (`ToolLocator` uses `which`; live-capture is
   macOS-only; the `bin/` wrapper is bash). The Windows port is later (see §9).
-- **The Recorder headless-component preview console** — separate deferred work.
+- **The MyApp headless-component preview console** — separate deferred work.
 - **A public marketplace / sharing to other machines** — that's the future Option C
   (see §9); this spec is local install only.
 - **The description-optimization loop** for skill triggering — unrelated, deferred.
@@ -151,14 +151,14 @@ Idempotent, one command:
   and `plugin/bin/glimpse --check-icons`, so the smoke test runs on a fresh checkout
   without a global install.
 
-## 5. What Recorder gets (no Recorder code changes)
+## 5. What MyApp gets (no MyApp code changes)
 
-Once installed, from `~/dev/Recorder`:
+Once installed, from `~/dev/MyApp`:
 - **Diagrams:** the `diagram-design` skill triggers; `glimpse foo.mmd` renders into
-  Recorder's `.claude/tmp/ui-snapshots/glimpse/` (existing per-repo `OutputLocator`).
-- **Live screenshots:** `glimpse --renderer app --window "Recorder"` captures the real
+  MyApp's `.claude/tmp/ui-snapshots/glimpse/` (existing per-repo `OutputLocator`).
+- **Live screenshots:** `glimpse --renderer app --window "MyApp"` captures the real
   app window (Screen-Recording permission caveat as documented).
-- Recorder is otherwise **untouched** — no project reference, submodule, or copied files.
+- MyApp is otherwise **untouched** — no project reference, submodule, or copied files.
 
 ## 6. Error Handling / Edge Cases
 
@@ -185,9 +185,9 @@ Once installed, from `~/dev/Recorder`:
      to the plugin's `bin/`. Note: skills-dir plugins **auto-load next session** (restart
      or `/reload-plugins`), not mid-session. **Fallback if it ever regresses:**
      `install.sh` *copies* the plugin instead of symlinking (loses always-current).
-  2. From `~/dev/Recorder` (a different repo): `glimpse <a test .mmd>` renders a real PNG
+  2. From `~/dev/MyApp` (a different repo): `glimpse <a test .mmd>` renders a real PNG
      (proves the CLI + SkiaSharp natives work outside this repo), and the `diagram-design`
-     skill is available there; plus a live `--window "Recorder"` capture.
+     skill is available there; plus a live `--window "MyApp"` capture.
 
 ## 8. Build Order (for the plan)
 
@@ -199,7 +199,7 @@ Once installed, from `~/dev/Recorder`:
    `scripts/glimpse`; gitignore nothing new (no `.dist`).
 5. `scripts/install.sh` (+ `--uninstall`, copy-fallback).
 6. Run install; **verify the symlinked plugin loads + `glimpse` on PATH**, then verify
-   rendering + a live capture from `~/dev/Recorder`, and that the skills are available there.
+   rendering + a live capture from `~/dev/MyApp`, and that the skills are available there.
 
 ## 9. Future: Option C — public marketplace (when stable + sharing)
 

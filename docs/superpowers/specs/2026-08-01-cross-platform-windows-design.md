@@ -38,7 +38,7 @@ requiring genuinely new code.
 
 ### Goals
 - All five renderers (`mermaid`, `graphviz`, `d2`, `web`, `app`) work on **both** OSes.
-- **Live-window capture on Windows** — `--window "Recorder"`, `--list-windows`, `--window-id`
+- **Live-window capture on Windows** — `--window "MyApp"`, `--list-windows`, `--window-id`
   behave as they do on macOS.
 - **One target framework** (`net10.0`). No multi-targeting, no new projects, no conditional
   `ProjectReference`s.

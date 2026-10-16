@@ -116,9 +116,9 @@ home) — no Avalonia dependency. The new console references only `Glimpse.Core`
     "runId": "<guid>",
     "generatedAt": "<iso8601>",
     "captures": [
-      { "name": "Recorder", "mode": "window",   // window | fullscreen
-        "app": "Recorder", "windowId": 4271, "windowTitle": "Mimica Recorder",
-        "path": "Recorder.png", "width": 1280, "height": 800,
+      { "name": "MyApp", "mode": "window",   // window | fullscreen
+        "app": "MyApp", "windowId": 4271, "windowTitle": "My App",
+        "path": "MyApp.png", "width": 1280, "height": 800,
         "status": "ok",                          // ok | failed
         "capturedAt": "<iso8601>",
         "warnings": ["fullscreen-fallback"] }    // structured, see §6
@@ -133,7 +133,7 @@ home) — no Avalonia dependency. The new console references only `Glimpse.Core`
 
 ```
 dotnet run --project tools/Glimpse.Capture -- \
-    --app "Recorder" [--title "<substr>"] [--out <dir>] [--name <stem>]
+    --app "MyApp" [--title "<substr>"] [--out <dir>] [--name <stem>]
 ```
 Flow:
 1. Parse + validate args (`--app` required; unknown flag / missing value → error, exit 2).
@@ -202,7 +202,7 @@ app, then re-run.** First-run UX is "grant once."
     stable-name overwrite produces no accumulation across runs.
   - `CaptureManifest` round-trip (atomic write).
 - **Integration (manual — needs macOS TCC + a live window):** capture a real running
-  app end-to-end (e.g. Safari or the Recorder app), confirm the PNG shows that window
+  app end-to-end (e.g. Safari or MyApp), confirm the PNG shows that window
   and the manifest's resolved id/title are correct. Not unit-tested (TCC + a live window
   can't run headless/CI).
 

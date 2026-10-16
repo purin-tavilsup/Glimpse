@@ -13,7 +13,7 @@ that Claude can `Read` (Claude can view images directly), closing the loop.
 
 Constraints from brainstorming:
 
-- **General-purpose**, not Recorder-specific — usable for any future UI work.
+- **General-purpose**, not app-specific — usable for any future UI work.
 - **Modular**: a generic core with **per-framework modules/extensions**
   (Avalonia first; web, mobile later).
 - **Hybrid capture**: fast *isolated component* rendering **and** *live running app*
@@ -30,7 +30,7 @@ Constraints from brainstorming:
 - A generic **Avalonia rendering engine**: render *any* Avalonia `Control` to pixels,
   headlessly, with no app-specific dependencies.
 - A **thin per-project "preview console"** pattern so a specific app's real compiled
-  views can be rendered; **Recorder preview console** is the first consumer.
+  views can be rendered; **MyApp preview console** is the first consumer.
 - A small **CLI surface** (the preview console itself) that drives the engine and asks
   Core to write PNG(s) + manifest.
 
@@ -75,7 +75,7 @@ console**. The only thing that knows about a specific app is its console project
 |  - refs Snapshots.Avalonia + the app's UI assembly|
 |  - registers that app's scenes (real views +      |
 |    stub VMs), injects app Styles/resources        |
-|  - e.g. Mimica.Recorder.UI.Previews               |
+|  - e.g. MyApp.UI.Previews               |
 +---------------------------------------------------+
 ```
 
@@ -91,16 +91,16 @@ the engine *and* its own UI assembly, so everything compiles and resolves in **o
 coherent dependency graph**. Run it with `dotnet run`:
 
 ```
-dotnet run --project Tools/Mimica.Recorder.UI.Previews -- \
+dotnet run --project Tools/MyApp.UI.Previews -- \
     --scene LoginWindow --theme both --out .claude/tmp/ui-snapshots
 ```
 
 This still satisfies the real goal — the engine's heavy deps live in the **separate
-preview project**, never in the shipping `Mimica.Recorder.UI`.
+preview project**, never in the shipping `MyApp.UI`.
 
 **Hard constraint (state explicitly, enforce at startup):** the engine and every
 consuming app must share the **same Avalonia 11.3.x** version and target **net10.0**
-(matches Recorder). The console fails fast with a clear message on mismatch.
+(matches MyApp). The console fails fast with a clear message on mismatch.
 
 For greenfield/ad-hoc design with no app, a tiny **scratch preview console** ships with
 the repo; I write inline scenes there — no app references at all.
@@ -222,12 +222,12 @@ the repo; I write inline scenes there — no app references at all.
 - **Claude's loop**: run the console (or `screencapture`) → read `manifest.json` →
   `Read` the referenced PNG → iterate.
 
-### 4.5 Recorder preview console (first consumer)
+### 4.5 MyApp preview console (first consumer)
 
-- **Project**: `Mimica.Recorder.UI.Previews` (Exe, in the Recorder repo under `Tools/`),
-  net10.0, references `Snapshots.Avalonia` + `Mimica.Recorder.UI`.
+- **Project**: `MyApp.UI.Previews` (Exe, in the MyApp repo under `Tools/`),
+  net10.0, references `Snapshots.Avalonia` + `MyApp.UI`.
 - Registers 1–2 real views (e.g. the themed login window) with stub VMs, attaches the
-  app's `Styles`/resources, outputs to Recorder's `.claude/tmp/ui-snapshots/`.
+  app's `Styles`/resources, outputs to MyApp's `.claude/tmp/ui-snapshots/`.
 - This is the **end-to-end gating check** (see §7/§10) — it proves the dependency graph,
   resources, and capture all work together against real app views.
 
@@ -268,7 +268,7 @@ scene (IScene) --> preview console --> engine (settle loop, disable anim, cultur
 - **Async-ready test**: a scene whose VM loads async → engine awaits `ReadyAsync()`
   before capture; data is present in the frame.
 - **Scene smoke**: every registered scene `Build()`s without throwing.
-- **End-to-end Recorder console** is a **gating check run early** (not the last step) —
+- **End-to-end MyApp console** is a **gating check run early** (not the last step) —
   it's the only test that exercises the real app dependency graph + resources.
 - Visual-diff / golden baselines remain out of scope; naming + manifest leave room.
 
@@ -291,13 +291,13 @@ scene (IScene) --> preview console --> engine (settle loop, disable anim, cultur
    - `Glimpse.Avalonia` (rendering engine) — replaces `Snapshots.Avalonia` throughout.
    - `Glimpse.Core` (conventions: output dir, naming, manifest, OS capture).
    - Repo stays `ui-snapshot-tool`; consuming consoles keep their own names
-     (e.g. `Mimica.Recorder.UI.Previews`).
+     (e.g. `MyApp.UI.Previews`).
    - *Note:* §1–§8 still say `Snapshots.*` — read those as `Glimpse.*`; the
      implementation plan uses the final names.
 2. **Output location** — **DECIDED (2026-06-16): per-repo when inside a repo, central
    otherwise.** `.claude/tmp/ui-snapshots/` when a repo root is detected; fall back to
    `~/.claude/ui-snapshots/` for repo-less ad-hoc design.
-3. **Target framework** — **DECIDED: net10.0** (must match Recorder; can't load a net10
+3. **Target framework** — **DECIDED: net10.0** (must match MyApp; can't load a net10
    assembly into an older-runtime process).
 4. **Avalonia version pinning** — **DECIDED: engine + all consumers pin the same Avalonia
    11.3.x**, enforced by a startup check.
@@ -313,6 +313,6 @@ scene (IScene) --> preview console --> engine (settle loop, disable anim, cultur
    culture pinning, scaling, theme variants, capture → `RenderResult`.
 3. Snapshot **Core**: output dir + naming + atomic manifest (status/warnings) + PNG write.
 4. A **scratch preview console** + the determinism/theme/font/scaling tests.
-5. **Recorder preview console** with 1–2 real views (stub VMs) — the e2e gating check.
+5. **MyApp preview console** with 1–2 real views (stub VMs) — the e2e gating check.
 6. Generic macOS `screencapture` wrapper + permission/window-id helper + docs.
 7. (Later) skill packaging; web/mobile modules; visual diff.

@@ -12,7 +12,7 @@
 
 > Every task's requirements implicitly include this section. Values copied verbatim from the spec (`docs/superpowers/specs/2026-06-15-ui-snapshot-tool-design.md`).
 
-- **Target framework:** `net10.0` (must match Recorder; can't load a net10 assembly into an older-runtime process).
+- **Target framework:** `net10.0` (must match MyApp; can't load a net10 assembly into an older-runtime process).
 - **Avalonia version:** engine + all consumers pin the **same Avalonia 11.3.x**; enforced by a startup check that fails fast with the required version.
 - **Layering:** the engine returns **pixels (`byte[]`)**, never a path; **Core owns ALL disk I/O** (PNG write + manifest).
 - **Process model:** configure the headless platform **once per process** (platform is global, cannot re-init); `SnapshotSession` is single-threaded, one-shot per process, non-reentrant.
@@ -103,7 +103,7 @@ Create `Directory.Packages.props` (pins Avalonia 11.3.x once — the "same versi
 ```xml
 <Project>
   <PropertyGroup>
-    <AvaloniaVersion>11.3.17</AvaloniaVersion><!-- pinned to the patch already cached/used by Recorder -->
+    <AvaloniaVersion>11.3.17</AvaloniaVersion><!-- pinned to the patch already cached/used by MyApp -->
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Avalonia" Version="$(AvaloniaVersion)" />
@@ -1536,7 +1536,7 @@ git commit -m "feat: manifest records + merge + atomic SnapshotWriter"
 
 ## Task 12: `Glimpse.ScratchConsole` — CLI + runner (in-repo pipeline + resource gate)
 
-> This is the in-repo gate: inline scenes → real engine → real Core write → manifest. It proves the headless pipeline, Core I/O, **and** (via a runtime-XAML `DynamicResource` scene) that themed resource resolution works against the registered FluentTheme. It does **not** exercise an external app's `App.axaml`/merged dictionaries — that's the deferred Recorder console (see "Deferred"). The runner is testable with a fake renderer; `Program.cs` stays thin.
+> This is the in-repo gate: inline scenes → real engine → real Core write → manifest. It proves the headless pipeline, Core I/O, **and** (via a runtime-XAML `DynamicResource` scene) that themed resource resolution works against the registered FluentTheme. It does **not** exercise an external app's `App.axaml`/merged dictionaries — that's the deferred MyApp console (see "Deferred"). The runner is testable with a fake renderer; `Program.cs` stays thin.
 >
 > **Test-project layout (avoids dragging Avalonia into the framework-free Core tests):** CLI + runner + gate tests live in a dedicated `Glimpse.ScratchConsole.Tests`. `Glimpse.Core.Tests` stays pure (Abstractions + Core only); `Glimpse.Avalonia.Tests` does not reference the console.
 
@@ -2216,14 +2216,14 @@ Expected: all tests green.
 
 ## Deferred (explicitly out of this plan)
 
-- **Recorder preview console** (spec §4.5 / build-order step 5): separate repo (`~/dev/Recorder` under `Tools/`), blocked on the cross-repo distribution decision (spec §9.5). Its own plan once `Glimpse.Avalonia` is referenceable cross-repo. This is the *real* app-graph e2e gate; the scratch console gates the engine + theme-resource resolution within this repo.
-- **`IScene.Styles` / app-resource-attachment seam** (spec §4.2): an external app's `App.axaml` `Styles`/merged dictionaries are not auto-applied to the rendered `Window`. Deferred to the Recorder-console plan — adding a *defaulted* interface member (`IReadOnlyList<IStyle> Styles => []`) later is **non-breaking** to existing scenes, so designing it now buys nothing (YAGNI). The `ThemedControls` scene (Task 12) already proves FluentTheme template/brush resolution in-repo.
+- **MyApp preview console** (spec §4.5 / build-order step 5): separate repo (`~/dev/MyApp` under `Tools/`), blocked on the cross-repo distribution decision (spec §9.5). Its own plan once `Glimpse.Avalonia` is referenceable cross-repo. This is the *real* app-graph e2e gate; the scratch console gates the engine + theme-resource resolution within this repo.
+- **`IScene.Styles` / app-resource-attachment seam** (spec §4.2): an external app's `App.axaml` `Styles`/merged dictionaries are not auto-applied to the rendered `Window`. Deferred to the MyApp-console plan — adding a *defaulted* interface member (`IReadOnlyList<IStyle> Styles => []`) later is **non-breaking** to existing scenes, so designing it now buys nothing (YAGNI). The `ThemedControls` scene (Task 12) already proves FluentTheme template/brush resolution in-repo.
 - Window-id enumeration helper (`CGWindowList`/AppleScript) for `screencapture -l` — noted in spec §4.4; add when the live-capture flow needs it.
 - Skill packaging (`snapshot-ui` / `glimpse`), web/mobile modules, visual-diff baselines, Windows/Linux capture providers (spec §8).
 
 ## Self-Review (against the spec)
 
-- **§2 Goals** — snapshot core (Tasks 10–11, 13), Avalonia engine (Tasks 3–9), per-project console pattern (Task 12 scratch console; Recorder console deferred), CLI surface (Task 12). ✅
+- **§2 Goals** — snapshot core (Tasks 10–11, 13), Avalonia engine (Tasks 3–9), per-project console pattern (Task 12 scratch console; MyApp console deferred), CLI surface (Task 12). ✅
 - **§4.1 Core** — output dir (Task 10), `<scene>.<theme>.png` naming (Task 11 `SavePng`), atomic manifest + upsert by `(scene,theme)` + `failed` status (Tasks 11–12). ✅
 - **§4.2 Engine** — configure-once + one-shot guard (Task 4 fixture/ctor), settle loop (Task 4), scaling **descoped** with `scaling-ignored` warning (Tasks 4, 6), theme variants (Task 5), culture pin (Task 4 `CultureScope`), capture→pixels with `try/finally` teardown (Task 4). ✅
 - **§4.3 Scene** — `IScene` + `ReadyAsync` (Tasks 2, 9), stub VM default + templated/themed scene (Task 12 sample scenes). ✅

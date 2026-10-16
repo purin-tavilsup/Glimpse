@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make the `glimpse` CLI and the `glimpse` + `diagram-design` skills usable from any repo on this machine (incl. Recorder) by packaging them as a symlinked Claude Code skills-directory plugin — no marketplace, repo stays canonical.
+**Goal:** Make the `glimpse` CLI and the `glimpse` + `diagram-design` skills usable from any repo on this machine (incl. MyApp) by packaging them as a symlinked Claude Code skills-directory plugin — no marketplace, repo stays canonical.
 
 **Architecture:** A `plugin/` dir in this repo holds `.claude-plugin/plugin.json`, a `bin/glimpse` wrapper (runs the in-repo built CLI DLL), and the two skills moved from `.claude/skills/`. `scripts/install.sh` symlinks `~/.claude/skills/glimpse` → `plugin/`, so Claude Code auto-loads it globally and puts `bin/glimpse` on PATH. The D2 icon check folds into the CLI (`glimpse --check-icons`) so skills depend only on the `glimpse` command.
 
@@ -511,45 +511,45 @@ git commit -m "feat(install): scripts/install.sh symlinks the glimpse plugin glo
 
 **Interfaces:** Consumes everything above.
 
-This task confirms the whole point: the CLI + skills work from a *different* repo (Recorder). `bin/` lands on PATH only in a session that loaded the plugin, so use a fresh headless `claude -p` session for the PATH-dependent checks (mirrors the spike).
+This task confirms the whole point: the CLI + skills work from a *different* repo (MyApp). `bin/` lands on PATH only in a session that loaded the plugin, so use a fresh headless `claude -p` session for the PATH-dependent checks (mirrors the spike).
 
-- [ ] **Step 1: Confirm `glimpse` resolves on PATH from the Recorder repo (fresh session)**
+- [ ] **Step 1: Confirm `glimpse` resolves on PATH from the MyApp repo (fresh session)**
 
 Run:
 ```bash
-cd ~/dev/Recorder 2>/dev/null && claude -p "Run exactly this and report only stdout: which glimpse || echo NOTFOUND" --dangerously-skip-permissions
+cd ~/dev/MyApp 2>/dev/null && claude -p "Run exactly this and report only stdout: which glimpse || echo NOTFOUND" --dangerously-skip-permissions
 ```
 Expected: a path ending in `/.claude/skills/glimpse/bin/glimpse` (NOT `NOTFOUND`).
 
-- [ ] **Step 2: Render a diagram from the Recorder repo**
+- [ ] **Step 2: Render a diagram from the MyApp repo**
 
 Run:
 ```bash
-printf 'flowchart TD\n  A[Recorder] --> B[Glimpse]\n' > /tmp/recorder-smoke.mmd
-cd ~/dev/Recorder && claude -p "Run exactly this and report only stdout: glimpse /tmp/recorder-smoke.mmd --name recorder-smoke --out /tmp/recorder-smoke --no-manifest" --dangerously-skip-permissions
-ls -la /tmp/recorder-smoke/recorder-smoke.png
+printf 'flowchart TD\n  A[MyApp] --> B[Glimpse]\n' > /tmp/myapp-smoke.mmd
+cd ~/dev/MyApp && claude -p "Run exactly this and report only stdout: glimpse /tmp/myapp-smoke.mmd --name myapp-smoke --out /tmp/myapp-smoke --no-manifest" --dangerously-skip-permissions
+ls -la /tmp/myapp-smoke/myapp-smoke.png
 ```
 Expected: CLI prints `Status:   ok (...)`; the PNG exists and is non-trivial in size.
 
-- [ ] **Step 3: Confirm the skills are available in Recorder**
+- [ ] **Step 3: Confirm the skills are available in MyApp**
 
-Run: `cd ~/dev/Recorder && claude -p "List your available skills whose name contains 'glimpse' or 'diagram'. Output just the names." --dangerously-skip-permissions`
+Run: `cd ~/dev/MyApp && claude -p "List your available skills whose name contains 'glimpse' or 'diagram'. Output just the names." --dangerously-skip-permissions`
 Expected: mentions the `glimpse` and `diagram-design` skills (namespaced `glimpse:…`).
 
-- [ ] **Step 4: (Optional, manual) live-window capture of Recorder**
+- [ ] **Step 4: (Optional, manual) live-window capture of MyApp**
 
-Only if the Recorder app is running and Screen Recording permission is granted for the terminal:
+Only if MyApp is running and Screen Recording permission is granted for the terminal:
 ```bash
-cd ~/dev/Recorder && glimpse --renderer app --window "Recorder" --out /tmp/recorder-shot --no-manifest
+cd ~/dev/MyApp && glimpse --renderer app --window "MyApp" --out /tmp/myapp-shot --no-manifest
 ```
-Expected: a `Window: Recorder …` line and a PNG of the live app. (If permission is denied, the PNG shows only desktop — grant permission and retry. If Recorder isn't running, skip.)
+Expected: a `Window: MyApp …` line and a PNG of the live app. (If permission is denied, the PNG shows only desktop — grant permission and retry. If MyApp isn't running, skip.)
 
 - [ ] **Step 5: Record the result**
 
-Update `STATUS.md` item 6 to mark distribution DONE (installed + verified from Recorder), then commit:
+Update `STATUS.md` item 6 to mark distribution DONE (installed + verified from MyApp), then commit:
 ```bash
 git add STATUS.md
-git commit -m "docs: distribution verified — glimpse + skills usable from Recorder"
+git commit -m "docs: distribution verified — glimpse + skills usable from MyApp"
 ```
 
 ---
@@ -566,7 +566,7 @@ git commit -m "docs: distribution verified — glimpse + skills usable from Reco
 - §4.5 skill de-repo-pathing → Task 3. ✓
 - §4.6 install.sh (+ uninstall, refuse-real-dir) → Task 4. ✓
 - §4.7 smoke test repoint + remove scripts/glimpse → Task 2. ✓
-- §5/§7 Recorder acceptance + symlink-load verification → Task 5 (load-bearing assumption already spike-validated). ✓
+- §5/§7 MyApp acceptance + symlink-load verification → Task 5 (load-bearing assumption already spike-validated). ✓
 
 **Placeholder scan:** none — all steps have concrete code/commands.
 
