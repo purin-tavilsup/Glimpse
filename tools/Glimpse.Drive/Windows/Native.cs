@@ -1,8 +1,10 @@
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 
 namespace Glimpse.Drive.Windows;
 
 // Win32 calls answer even while an app's UI thread is blocked, which UI Automation calls do not.
+[SupportedOSPlatform("windows")]
 internal static class Native
 {
     [StructLayout(LayoutKind.Sequential)]

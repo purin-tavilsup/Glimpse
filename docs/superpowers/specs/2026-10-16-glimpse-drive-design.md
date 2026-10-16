@@ -17,15 +17,17 @@ tools/Glimpse.Drive/
   StepScript.cs       shared: `.steps` parsing
   WindowSet.cs        shared: the `expect` / `hold` assertions
   Aspire.cs           shared: .NET Aspire dashboard start/stop (installed Edge or Chrome, over DevTools)
-  Windows/            Windows driver: UI Automation (FlaUI) + Win32
+  Windows/            Windows driver: UI Automation (COM interop) + Win32 input
   MacOS/              macOS driver: Accessibility API (AXUIElement) + CoreGraphics
 drive-plugin/         the Claude Code plugin: bin/ wrappers + the driving-desktop-apps skill
 ```
 
-The project multi-targets `net10.0;net10.0-windows`. `Windows/` and FlaUI build only into `net10.0-windows`,
-because UI Automation needs a Windows target. Every other OS runs the `net10.0` build, which holds `MacOS/`. Both
-drivers read the `Glimpse.Core` window list. `Glimpse.Drive.Tests` binds to `net10.0`, so the shared logic is tested
-on every CI leg; `Glimpse.Drive.Windows.Tests` holds the Windows driver's desktop tests and is skipped elsewhere.
+There is one build, `net10.0`, holding every driver; each driver's classes are marked with the OS they run on
+(`[SupportedOSPlatform]`), so the platform analyzer catches a call that would reach the wrong OS. One build is what
+lets the CLI ship as a .NET tool, which can't hold an OS-targeted build. That rules out FlaUI, which ships only
+Windows-targeted builds, so the Windows driver calls UI Automation through `Interop.UIAutomationClient`, which
+targets plain .NET. Both drivers read the `Glimpse.Core` window list. `Glimpse.Drive.Tests` runs on every CI leg;
+`Glimpse.Drive.Windows.Tests` holds the Windows driver's desktop tests and is skipped elsewhere.
 
 **Why the assertions are shared:** `expect` and `hold` decide whether a step passed. If each driver implemented
 them, the same flow could pass on one OS and fail on another for reasons that have nothing to do with the app.
@@ -77,7 +79,7 @@ Where the APIs differ, a command keeps its meaning. The mapping as built:
 | `tray` | notification-area `NotifyItemIcon`, overflow window | every process's `AXExtrasMenuBar` items, by tooltip (`AXHelp`), title, description, then owner name |
 | `foreground` | `GetForegroundWindow` | the app answering `AXFrontmost`, and its `AXFocusedWindow` |
 | window list | `Glimpse.Core`'s window finder (`EnumWindows`), visible frame bounds | `Glimpse.Core`'s window finder (the window server) |
-| `shot` | FlaUI capture | `screencapture`, scaled to screen points |
+| `shot` | `Glimpse.Core`'s capturer (PrintWindow), cropped to the visible frame | `screencapture`, scaled to screen points |
 | `closetab` | Chrome's address bar via UIA | Chrome's address bar via AX |
 
 Three macOS answers are not the obvious API. The system-wide element's `AXFocusedApplication` refuses a

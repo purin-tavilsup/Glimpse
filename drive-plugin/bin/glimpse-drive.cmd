@@ -22,7 +22,7 @@ if "%~1"=="--check-sidecar" (
 if not defined REPO for %%I in ("%BIN%..\..") do set "REPO=%%~fI"
 
 set "PROJECT=%REPO%\tools\Glimpse.Drive\Glimpse.Drive.csproj"
-set "DLL=%REPO%\tools\Glimpse.Drive\bin\Debug\net10.0-windows\Glimpse.Drive.dll"
+set "DLL=%REPO%\tools\Glimpse.Drive\bin\Debug\net10.0\Glimpse.Drive.dll"
 if not exist "%PROJECT%" (
     echo glimpse-drive: no clone found; run scripts\install.ps1 from a Glimpse clone 1>&2
     exit /b 127
@@ -35,7 +35,7 @@ where dotnet >nul 2>&1 || (
 rem glimpse-drive-stale.ps1 decides whether to rebuild; the stamp it reads marks a finished build.
 powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%BIN%glimpse-drive-stale.ps1" -Repo "%REPO%" >nul 2>&1
 if errorlevel 1 (
-    dotnet build "%PROJECT%" -f net10.0-windows -v quiet 1>&2
+    dotnet build "%PROJECT%" -v quiet 1>&2
     if errorlevel 1 exit /b 1
     type nul > "%REPO%\tools\Glimpse.Drive\obj\glimpse-drive-wrapper.stamp"
 )

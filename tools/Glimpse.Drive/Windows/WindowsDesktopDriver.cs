@@ -1,19 +1,23 @@
-using FlaUI.Core.AutomationElements;
-using FlaUI.Core.Capturing;
-using FlaUI.Core.Definitions;
-using FlaUI.Core.Input;
-using FlaUI.Core.WindowsAPI;
-using FlaUI.UIA3;
+using System.Drawing;
+using System.Runtime.Versioning;
+using Glimpse.Abstractions;
+using Glimpse.Core;
+using Interop.UIAutomationClient;
 
 namespace Glimpse.Drive.Windows;
 
-/// <summary>The desktop driver on Windows, through UI Automation (FlaUI) and a few Win32 calls.</summary>
+/// <summary>The desktop driver on Windows, through UI Automation, Win32 input and Glimpse.Core's window list and capture.</summary>
+[SupportedOSPlatform("windows")]
 internal sealed class WindowsDesktopDriver : IDesktopDriver
 {
     private const int InvokeLimitSeconds = 10;
     private const int MaxTabsClosed = 20;
     private const string ChromeAddressBar = "Address and search bar";
     private static readonly TimeSpan FindDefault = TimeSpan.FromSeconds(Cli.FindDefaultSeconds);
+
+    private readonly Uia uia = new();
+
+    public WindowsDesktopDriver() => Input.UsePhysicalPixels();
 
     public void ListWindows(string[]? processNames)
     {
@@ -22,7 +26,7 @@ internal sealed class WindowsDesktopDriver : IDesktopDriver
         {
             if (processNames == null || processNames.Contains(w.OwnerName, StringComparer.OrdinalIgnoreCase))
             {
-                Console.WriteLine($"#{i} {w.OwnerName} '{w.Title}' rect={new System.Drawing.Rectangle(w.X, w.Y, w.Width, w.Height)}");
+                Console.WriteLine($"#{i} {w.OwnerName} '{w.Title}' rect={new Rectangle(w.X, w.Y, w.Width, w.Height)}");
             }
             i++;
         }
@@ -38,31 +42,29 @@ internal sealed class WindowsDesktopDriver : IDesktopDriver
 
     public void Controls(string proc, string titlePart)
     {
-        var window = WindowTitled(proc, titlePart);
-        var controls = window.FindAllDescendants(cf => cf.ByControlType(ControlType.Edit)
-                                                         .Or(cf.ByControlType(ControlType.Button))
-                                                         .Or(cf.ByControlType(ControlType.Document)));
-        foreach (var e in controls)
+        var condition = uia.AnyControlType(UIA_ControlTypeIds.UIA_EditControlTypeId, UIA_ControlTypeIds.UIA_ButtonControlTypeId,
+                                           UIA_ControlTypeIds.UIA_DocumentControlTypeId);
+        foreach (var e in WindowTitled(proc, titlePart).Find(TreeScope.TreeScope_Descendants, condition))
         {
-            Console.WriteLine($"{e.Properties.ControlType.ValueOrDefault} name='{e.Properties.Name.ValueOrDefault}' id='{e.Properties.AutomationId.ValueOrDefault}'");
+            Console.WriteLine($"{e.ControlType()} name='{e.Name()}' id='{e.Id()}'");
         }
     }
 
     public void Wait(string proc, string key, TimeSpan timeout) => Find(proc, key, timeout);
 
     public IReadOnlyList<string> WindowLabels(string proc, IReadOnlyList<string> anchors) =>
-        [.. TopWindows(proc).Select(w => anchors.FirstOrDefault(a => Match(w, a) != null)
-                                         ?? $"unexpected window {w.Properties.BoundingRectangle.ValueOrDefault}")];
+        [.. TopWindows(proc).Select(w => anchors.FirstOrDefault(a => Match(w, a) != null) ?? $"unexpected window {w.Bounds()}")];
 
-    public void Click(string proc, string key) => Find(proc, key).Click();
+    public void Click(string proc, string key) => Click(Find(proc, key), right: false);
 
     // WinForms runs a button's click, ShowDialog included, inside the UIA Invoke call, so a modal makes Invoke block.
     public void Invoke(string proc, string key)
     {
-        var element = Find(proc, key);
+        var invoke = Find(proc, key).Pattern<IUIAutomationInvokePattern>(UIA_PatternIds.UIA_InvokePatternId)
+                     ?? throw new InvalidOperationException($"'{key}' can't be invoked; use `click`");
         try
         {
-            Task.Run(() => element.AsButton().Invoke()).WaitAsync(TimeSpan.FromSeconds(InvokeLimitSeconds)).GetAwaiter().GetResult();
+            Task.Run(invoke.Invoke).WaitAsync(TimeSpan.FromSeconds(InvokeLimitSeconds)).GetAwaiter().GetResult();
         }
         catch (TimeoutException)
         {
@@ -71,11 +73,11 @@ internal sealed class WindowsDesktopDriver : IDesktopDriver
         }
     }
 
-    public void Type(string proc, string key, string text) => Find(proc, key).AsTextBox().Text = text;
+    public void Type(string proc, string key, string text) => ValueOf(proc, key).SetValue(text);
 
-    public string Value(string proc, string key) => Find(proc, key).Patterns.Value.Pattern.Value.Value;
+    public string Value(string proc, string key) => ValueOf(proc, key).CurrentValue;
 
-    public string Name(string proc, string key) => Find(proc, key).Properties.Name.Value;
+    public string Name(string proc, string key) => Find(proc, key).Name();
 
     public void Keys(string proc, string titlePart, IReadOnlyList<string> tokens)
     {
@@ -84,18 +86,18 @@ internal sealed class WindowsDesktopDriver : IDesktopDriver
         {
             switch (token)
             {
-                case "{ENTER}": Keyboard.Type(VirtualKeyShort.ENTER); break;
-                case "{TAB}": Keyboard.Type(VirtualKeyShort.TAB); break;
-                case "{ESC}": Keyboard.Type(VirtualKeyShort.ESCAPE); break;
+                case "{ENTER}": Input.Keys(Input.Return); break;
+                case "{TAB}": Input.Keys(Input.Tab); break;
+                case "{ESC}": Input.Keys(Input.Escape); break;
                 case var t when t.StartsWith("{WAITFOR:") && t.EndsWith('}'): Find(proc, t[9..^1]); break;
-                default: Keyboard.Type(token); break;
+                default: Input.Text(token); break;
             }
             // Gives the app time to react (focus moves, a page loads) before the next key arrives.
             Thread.Sleep(300);
         }
     }
 
-    public void ClickAt(int x, int y) => Mouse.Click(new System.Drawing.Point(x, y));
+    public void ClickAt(int x, int y) => Input.Click(x, y);
 
     public void Front(string proc, string titlePart) => BringToFront(proc, titlePart);
 
@@ -104,18 +106,19 @@ internal sealed class WindowsDesktopDriver : IDesktopDriver
     {
         if (proc is null || titlePart is null)
         {
-            Capture.Screen(-1).ToFile(file);
+            Capture(file, windowId: null);
             var x = Native.GetSystemMetrics(Native.XVirtualScreen);
             var y = Native.GetSystemMetrics(Native.YVirtualScreen);
             Console.WriteLine($"saved {file}: whole desktop, origin ({x},{y})");
             return;
         }
 
-        // The capture copies screen pixels, so whatever covers the window would be in the shot instead.
+        // The capture is cropped to the window's visible frame, which is the origin the window list reports.
         var window = BringToFront(proc, titlePart);
-        var r = window.BoundingRectangle;
-        Capture.Element(window).ToFile(file);
-        Console.WriteLine($"saved {file}: {proc} '{window.Properties.Name.ValueOrDefault}', origin ({r.X},{r.Y})");
+        var listed = WindowList.Of(proc).FirstOrDefault(w => w.WindowId == window.Handle().ToInt64())
+                     ?? throw new InvalidOperationException($"the {proc} window titled *{titlePart}* closed");
+        Capture(file, listed.WindowId);
+        Console.WriteLine($"saved {file}: {proc} '{window.Name()}', origin ({listed.X},{listed.Y})");
     }
 
     // Taking the foreground never makes a window visible, so a hidden window can hold the keyboard while the user sees
@@ -127,8 +130,8 @@ internal sealed class WindowsDesktopDriver : IDesktopDriver
         Native.GetWindowRect(hwnd, out var r);
         var owner = ProcessName((int)processId);
         var visible = Native.IsWindowVisible(hwnd);
-        var window = Automation().FromHandle(hwnd);
-        var line = $"foreground: {owner} '{window.Properties.Name.ValueOrDefault}' id='{window.Properties.AutomationId.ValueOrDefault}' " +
+        var window = uia.FromHandle(hwnd);
+        var line = $"foreground: {owner} '{window?.Name()}' id='{window?.Id()}' " +
                    $"visible={visible} rect=({r.Left},{r.Top})-({r.Right},{r.Bottom})";
         if (proc is null)
         {
@@ -137,7 +140,7 @@ internal sealed class WindowsDesktopDriver : IDesktopDriver
         }
 
         var pass = visible && owner.Equals(proc, StringComparison.OrdinalIgnoreCase)
-                   && (anchor is null || MatchOne(window, anchor) is not null);
+                   && (anchor is null || (window is not null && MatchOne(window, anchor) is not null));
         Console.WriteLine($"{(pass ? "PASS" : "FAIL")} {line}");
         return pass ? 0 : 1;
     }
@@ -148,18 +151,11 @@ internal sealed class WindowsDesktopDriver : IDesktopDriver
         var icon = TrayIcon(tooltipPart);
         if (icon == null)
         {
-            Find("explorer", "~Hidden Icons").Click();
+            Click(Find("explorer", "~Hidden Icons"), right: false);
             Thread.Sleep(1000);
             icon = TrayIcon(tooltipPart) ?? throw new InvalidOperationException($"no tray icon named *{tooltipPart}*");
         }
-        if (rightClick)
-        {
-            icon.RightClick();
-        }
-        else
-        {
-            icon.Click();
-        }
+        Click(icon, rightClick);
     }
 
     // Apps under test open their pages in the person's own Chrome, so a tab is closed only when its address proves
@@ -169,39 +165,37 @@ internal sealed class WindowsDesktopDriver : IDesktopDriver
         var closed = 0;
         while (closed < MaxTabsClosed && ActiveTabMatching(urlParts) is { } window)
         {
-            window.AsWindow().SetForeground();
-            Thread.Sleep(300);
-            Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_W);
+            Input.BringToFront(window.Handle());
+            Input.Keys(Input.Control, Input.W);
             Thread.Sleep(700);
             closed++;
         }
         return closed;
     }
 
-    private static UIA3Automation Automation() => new();
-
-    private static IEnumerable<AutomationElement> TopWindows(string proc)
+    private static void Click(IUIAutomationElement element, bool right)
     {
-        var automation = Automation();
-        return WindowList.Of(proc)
-            .Select(w => ElementOf(automation, w))
-            .OfType<AutomationElement>()
-            .Where(e => !e.Properties.IsOffscreen.ValueOrDefault);
+        var point = element.ClickPoint();
+        Input.Click(point.X, point.Y, right);
     }
 
-    private static AutomationElement? ElementOf(UIA3Automation automation, Glimpse.Core.WindowInfo window)
+    private static void Capture(string file, long? windowId)
     {
-        try
+        var outcome = new WindowsAppCapturer()
+            .CaptureAsync(new RenderRequest("", Path.GetFullPath(file), 0, 0, SnapshotTheme.Light, windowId))
+            .GetAwaiter().GetResult();
+        if (outcome.Status == "failed")
         {
-            return automation.FromHandle(new IntPtr(window.WindowId));
-        }
-        catch (System.Runtime.InteropServices.COMException)
-        {
-            return null; // the window closed between the listing and this lookup
+            throw new InvalidOperationException($"capture failed: {string.Join("; ", outcome.Warnings)}");
         }
     }
 
-    private static AutomationElement Find(string proc, string key, TimeSpan? timeout = null)
+    private IEnumerable<IUIAutomationElement> TopWindows(string proc) => WindowList.Of(proc)
+        .Select(w => uia.FromHandle(new IntPtr(w.WindowId)))
+        .OfType<IUIAutomationElement>()
+        .Where(e => !e.IsOffscreen());
+
+    private IUIAutomationElement Find(string proc, string key, TimeSpan? timeout = null)
     {
         var (anchor, target) = ElementKey.Parse(key);
         var deadline = DateTime.UtcNow + (timeout ?? FindDefault);
@@ -223,47 +217,49 @@ internal sealed class WindowsDesktopDriver : IDesktopDriver
         throw new InvalidOperationException($"'{key}' not found in {proc}");
     }
 
-    private static AutomationElement? Match(AutomationElement root, string key) =>
-        ElementKey.Path(key).Aggregate((AutomationElement?)root, (scope, part) => scope is null ? null : MatchOne(scope, part));
+    private IUIAutomationValuePattern ValueOf(string proc, string key) =>
+        Find(proc, key).Pattern<IUIAutomationValuePattern>(UIA_PatternIds.UIA_ValuePatternId)
+        ?? throw new InvalidOperationException($"'{key}' has no value to read or set");
+
+    private IUIAutomationElement? Match(IUIAutomationElement root, string key) =>
+        ElementKey.Path(key).Aggregate((IUIAutomationElement?)root, (scope, part) => scope is null ? null : MatchOne(scope, part));
 
     // The root counts too, so a window's own AutomationId works as a key.
-    private static AutomationElement? MatchOne(AutomationElement root, string key) => key.StartsWith('~')
-        ? root.FindAllDescendants().FirstOrDefault(e => e.Properties.Name.ValueOrDefault?.Contains(key[1..], StringComparison.OrdinalIgnoreCase) == true)
-        : root.Properties.AutomationId.ValueOrDefault == key ? root
-        : root.FindFirstDescendant(cf => cf.ByAutomationId(key).Or(cf.ByName(key)));
+    private IUIAutomationElement? MatchOne(IUIAutomationElement root, string key) => key.StartsWith('~')
+        ? root.Find(TreeScope.TreeScope_Descendants, uia.All).FirstOrDefault(e => e.Name().Contains(key[1..], StringComparison.OrdinalIgnoreCase))
+        : root.Id() == key ? root
+        : root.FindFirst(TreeScope.TreeScope_Descendants, uia.IdOrName(key));
 
-    private static AutomationElement WindowTitled(string proc, string titlePart) =>
-        TopWindows(proc).FirstOrDefault(w => w.Properties.Name.ValueOrDefault?.Contains(titlePart) == true)
+    private IUIAutomationElement WindowTitled(string proc, string titlePart) =>
+        TopWindows(proc).FirstOrDefault(w => w.Name().Contains(titlePart))
         ?? throw new InvalidOperationException($"no {proc} window titled *{titlePart}*");
 
-    private static AutomationElement BringToFront(string proc, string titlePart)
+    private IUIAutomationElement BringToFront(string proc, string titlePart)
     {
         var window = WindowTitled(proc, titlePart);
-        window.AsWindow().SetForeground();
-        Thread.Sleep(Cli.Poll);
+        Input.BringToFront(window.Handle());
         return window;
     }
 
     // Taskbar buttons carry the app name too; only NotifyItemIcon elements are notification-area icons.
-    private static AutomationElement? TrayIcon(string tooltipPart) => TopWindows("explorer")
-        .SelectMany(w => w.FindAllDescendants(cf => cf.ByAutomationId("NotifyItemIcon")))
-        .FirstOrDefault(e => e.Properties.Name.ValueOrDefault?.Contains(tooltipPart, StringComparison.OrdinalIgnoreCase) == true);
+    private IUIAutomationElement? TrayIcon(string tooltipPart) => TopWindows("explorer")
+        .SelectMany(w => w.Find(TreeScope.TreeScope_Descendants, uia.Id("NotifyItemIcon")))
+        .FirstOrDefault(e => e.Name().Contains(tooltipPart, StringComparison.OrdinalIgnoreCase));
 
-    private static AutomationElement? ActiveTabMatching(string urlParts) =>
+    private IUIAutomationElement? ActiveTabMatching(string urlParts) =>
         TopWindows("chrome").FirstOrDefault(w =>
-            Match(w, ChromeAddressBar)?.Patterns.Value.PatternOrDefault?.Value.ValueOrDefault is { } url
+            Match(w, ChromeAddressBar)?.Pattern<IUIAutomationValuePattern>(UIA_PatternIds.UIA_ValuePatternId)?.CurrentValue is { } url
             && urlParts.Split(',').Any(part => url.Contains(part, StringComparison.OrdinalIgnoreCase)));
 
-    private static void Dump(AutomationElement e, int level, int depth)
+    private void Dump(IUIAutomationElement e, int level, int depth)
     {
-        var p = e.Properties;
-        Console.WriteLine($"{new string(' ', level * 2)}{p.ControlType.ValueOrDefault} name='{p.Name.ValueOrDefault}' " +
-                          $"id='{p.AutomationId.ValueOrDefault}' enabled={p.IsEnabled.ValueOrDefault} rect={p.BoundingRectangle.ValueOrDefault}");
+        Console.WriteLine($"{new string(' ', level * 2)}{e.ControlType()} name='{e.Name()}' " +
+                          $"id='{e.Id()}' enabled={e.IsEnabled()} rect={e.Bounds()}");
         if (level >= depth)
         {
             return;
         }
-        foreach (var c in e.FindAllChildren())
+        foreach (var c in e.Find(TreeScope.TreeScope_Children, uia.All))
         {
             Dump(c, level + 1, depth);
         }

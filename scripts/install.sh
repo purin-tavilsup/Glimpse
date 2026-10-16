@@ -7,16 +7,15 @@ set -euo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# name | plugin folder | project its wrapper runs | framework to build (empty = the project's only one).
-# The desktop driver multi-targets; its net10.0 build is the one the bash wrapper runs.
+# name | plugin folder | project its wrapper runs
 plugins=(
-    "glimpse|plugin|tools/Glimpse.Capture/Glimpse.Capture.csproj|"
-    "glimpse-drive|drive-plugin|tools/Glimpse.Drive/Glimpse.Drive.csproj|net10.0"
+    "glimpse|plugin|tools/Glimpse.Capture/Glimpse.Capture.csproj"
+    "glimpse-drive|drive-plugin|tools/Glimpse.Drive/Glimpse.Drive.csproj"
 )
 
 if [ "${1:-}" = "--uninstall" ]; then
     for entry in "${plugins[@]}"; do
-        IFS='|' read -r name _ _ _ <<< "$entry"
+        IFS='|' read -r name _ _ <<< "$entry"
         link="$HOME/.claude/skills/$name"
         if [ -L "$link" ]; then rm "$link"; echo "Removed $link"; else echo "No symlink at $link"; fi
     done
@@ -27,11 +26,11 @@ command -v dotnet >/dev/null 2>&1 || { echo "dotnet not found — install the .N
 
 mkdir -p "$HOME/.claude/skills"
 for entry in "${plugins[@]}"; do
-    IFS='|' read -r name folder project framework <<< "$entry"
+    IFS='|' read -r name folder project <<< "$entry"
     link="$HOME/.claude/skills/$name"
 
     echo "Building $(basename "$project" .csproj)..."
-    dotnet build "$repo/$project" ${framework:+-f "$framework"} -v quiet
+    dotnet build "$repo/$project" -v quiet
     chmod +x "$repo/$folder/bin/$name"
 
     if [ -e "$link" ] && [ ! -L "$link" ]; then

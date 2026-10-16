@@ -11,7 +11,7 @@ they must not use the computer during a run.
 
 | OS | Driver | Status |
 |---|---|---|
-| Windows | UI Automation (FlaUI) | ready |
+| Windows | UI Automation | ready |
 | macOS | Accessibility API (AXUIElement) | ready; see [macOS](#macos) for its permissions and differences |
 
 ```bash

@@ -13,9 +13,8 @@ $ErrorActionPreference = 'Stop'
 $repo    = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $skills  = Join-Path $HOME '.claude/skills'
 $plugins = @(
-    @{ Name = 'glimpse';       Folder = 'plugin';       Project = 'tools/Glimpse.Capture/Glimpse.Capture.csproj'; Build = @() }
-    # The desktop driver's Windows build is the one the batch wrapper runs.
-    @{ Name = 'glimpse-drive'; Folder = 'drive-plugin'; Project = 'tools/Glimpse.Drive/Glimpse.Drive.csproj';     Build = @('-f', 'net10.0-windows') }
+    @{ Name = 'glimpse';       Folder = 'plugin';       Project = 'tools/Glimpse.Capture/Glimpse.Capture.csproj' }
+    @{ Name = 'glimpse-drive'; Folder = 'drive-plugin'; Project = 'tools/Glimpse.Drive/Glimpse.Drive.csproj' }
 )
 
 # The registry is edited directly because [Environment]::SetEnvironmentVariable rewrites the
@@ -105,7 +104,7 @@ function Write-Sidecar($plugin) {
 
 function Install-Plugin($plugin) {
     Write-Output "Building $($plugin.Project)..."
-    dotnet build (Join-Path $repo $plugin.Project) @($plugin.Build) -v quiet
+    dotnet build (Join-Path $repo $plugin.Project) -v quiet
     if ($LASTEXITCODE -ne 0) { Write-Error 'Build failed.' }
 
     Write-Sidecar $plugin
