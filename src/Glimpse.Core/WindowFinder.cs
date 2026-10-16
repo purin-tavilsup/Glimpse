@@ -58,7 +58,8 @@ public sealed class MacWindowFinder : IWindowFinder
     {
         var id = ReadNumber(dict, "kCGWindowNumber");
         var owner = ReadString(dict, "kCGWindowOwnerName");
-        if (id is null || owner is null)
+        var pid = ReadNumber(dict, "kCGWindowOwnerPID");
+        if (id is null || owner is null || pid is null)
             return null; // a window with no number/owner is not something we can target
 
         var title = ReadString(dict, "kCGWindowName");
@@ -68,7 +69,7 @@ public sealed class MacWindowFinder : IWindowFinder
         var onScreen = ReadBoolOrDefault(dict, "kCGWindowIsOnscreen", defaultValue: true);
         var (x, y, w, h) = ReadBounds(dict);
 
-        return new WindowInfo(id.Value, owner, title, x, y, w, h, (int)layer, onScreen);
+        return new WindowInfo(id.Value, owner, (int)pid.Value, title, x, y, w, h, (int)layer, onScreen);
     }
 
     private static long? ReadNumber(IntPtr dict, string key)
@@ -208,7 +209,8 @@ public sealed class WindowsWindowFinder : IWindowFinder
         // real windows. Helpers are excluded by WindowSelector's visibility and size rule instead.
         var title = ReadTitle(hwnd);
 
-        var owner = ReadOwnerProcessName(hwnd);
+        GetWindowThreadProcessId(hwnd, out var processId);
+        var owner = ReadOwnerProcessName(processId);
         if (owner is null)
             return null; // process gone or protected — not something we can target
 
@@ -216,7 +218,7 @@ public sealed class WindowsWindowFinder : IWindowFinder
         var isToolWindow = (ReadExStyle(hwnd) & WsExToolWindow) != 0;
         var onScreen = IsWindowVisible(hwnd) && !IsCloaked(hwnd);
 
-        return new WindowInfo(hwnd.ToInt64(), owner, title.Length == 0 ? null : title, x, y, width, height,
+        return new WindowInfo(hwnd.ToInt64(), owner, (int)processId, title.Length == 0 ? null : title, x, y, width, height,
             isToolWindow ? OverlayLayer : NormalLayer, onScreen);
     }
 
@@ -231,9 +233,8 @@ public sealed class WindowsWindowFinder : IWindowFinder
         return copied > 0 ? new string(buffer, 0, copied) : "";
     }
 
-    private static string? ReadOwnerProcessName(IntPtr hwnd)
+    private static string? ReadOwnerProcessName(uint processId)
     {
-        GetWindowThreadProcessId(hwnd, out var processId);
         if (processId == 0)
             return null;
 

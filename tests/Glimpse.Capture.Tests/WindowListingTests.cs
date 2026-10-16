@@ -11,7 +11,7 @@ public class WindowListingTests
     [Fact]
     public void FormatRow_WithAToolWindow_ShouldMarkItNotSelectable()
     {
-        var window = new WindowInfo(197280, "DDPM.Subagent.User", "EAWorkWindow", 0, 0, 10, 10, 1, true);
+        var window = new WindowInfo(197280, "DDPM.Subagent.User", 1, "EAWorkWindow", 0, 0, 10, 10, 1, true);
 
         var row = WindowListing.FormatRow(window);
 
@@ -21,7 +21,7 @@ public class WindowListingTests
     [Fact]
     public void FormatRow_WithAnOffScreenWindow_ShouldMarkItNotSelectable()
     {
-        var window = new WindowInfo(42, "Mimica Recorder", "Sign in", 0, 0, 700, 300, 0, false);
+        var window = new WindowInfo(42, "Mimica Recorder", 1, "Sign in", 0, 0, 700, 300, 0, false);
 
         var row = WindowListing.FormatRow(window);
 
@@ -31,7 +31,7 @@ public class WindowListingTests
     [Fact]
     public void FormatRow_WithASelectableWindow_ShouldNotMarkIt()
     {
-        var window = new WindowInfo(43, "Mimica Recorder", "Sign in", 0, 0, 700, 300, 0, true);
+        var window = new WindowInfo(43, "Mimica Recorder", 1, "Sign in", 0, 0, 700, 300, 0, true);
 
         var row = WindowListing.FormatRow(window);
 
@@ -41,7 +41,7 @@ public class WindowListingTests
     [Fact]
     public void FormatRow_WithAnUntitledWindow_ShouldKeepTheExistingColumns()
     {
-        var window = new WindowInfo(44, "Code", null, 0, 0, 1400, 900, 0, true);
+        var window = new WindowInfo(44, "Code", 1, null, 0, 0, 1400, 900, 0, true);
 
         var row = WindowListing.FormatRow(window);
 

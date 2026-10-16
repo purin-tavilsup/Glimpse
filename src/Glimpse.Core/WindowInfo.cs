@@ -4,6 +4,7 @@ namespace Glimpse.Core;
 public sealed record WindowInfo(
     long WindowId,
     string OwnerName,
+    int OwnerPid,
     string? Title,
     int X,
     int Y,
