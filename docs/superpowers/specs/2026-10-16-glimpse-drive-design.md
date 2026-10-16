@@ -23,9 +23,9 @@ drive-plugin/         the Claude Code plugin: bin/ wrappers + the driving-deskto
 ```
 
 The project multi-targets `net10.0;net10.0-windows`. `Windows/` and FlaUI build only into `net10.0-windows`,
-because UI Automation needs a Windows target. Every other OS runs the `net10.0` build, which holds `MacOS/` and
-the `Glimpse.Core` window list it reads. The test project binds to
-`net10.0`, so the shared logic is tested on every CI leg.
+because UI Automation needs a Windows target. Every other OS runs the `net10.0` build, which holds `MacOS/`. Both
+drivers read the `Glimpse.Core` window list. `Glimpse.Drive.Tests` binds to `net10.0`, so the shared logic is tested
+on every CI leg; `Glimpse.Drive.Windows.Tests` holds the Windows driver's desktop tests and is skipped elsewhere.
 
 **Why the assertions are shared:** `expect` and `hold` decide whether a step passed. If each driver implemented
 them, the same flow could pass on one OS and fail on another for reasons that have nothing to do with the app.
@@ -42,6 +42,11 @@ Each `IDesktopDriver` member backs one command; its XML docs are the detailed co
 - **Lookups wait.** A lookup polls every `Cli.Poll` until its timeout (`Cli.FindDefaultSeconds` unless the
   command passes one) and then throws `InvalidOperationException` naming the key and process.
 - **Only visible, on-screen top-level windows count** for `WindowLabels`, `Tree` and lookups.
+- **Windows come from the OS's own window list**, never from asking the accessibility API to list the desktop. On
+  Windows, UI Automation's desktop listing asks every app and sometimes takes tens of seconds, past the watchdog;
+  the window list asks no app. A driver builds accessibility elements only for the windows of the process it drives,
+  so another app that is stuck or suspended can't stall it. The list must hold the windows the accessibility API
+  would: on Windows that leaves out cloaked and empty windows, and a desktop test checks it against UI Automation.
 - **Output lines are an interface.** Skills and people read them, so keep these shapes:
   - `windows` / `zorder`: `#<index> <proc> '<title>' rect=<bounds>`, front to back, index over all windows
   - `shot`: `saved <file>: ... origin (<x>,<y>)`, where screen pixel = origin + image pixel
@@ -50,7 +55,7 @@ Each `IDesktopDriver` member backs one command; its XML docs are the detailed co
 - **Exit codes** come from `Cli`: 0 ok, 1 assertion or lookup failed, 2 watchdog. A driver throws; it never exits.
 - **The watchdog** abandons a step whose accessibility call stopped answering. `Program.cs` hands `Cli` an
   `onWatchdog` report for the OS that lists the process's visible windows **without** going through the
-  accessibility API, which is what is stuck (Windows uses `EnumWindows`, macOS the window server's list).
+  accessibility API, which is what is stuck; both drivers print it from the window list.
 
 ## Adding a driver
 
@@ -71,7 +76,8 @@ Where the APIs differ, a command keeps its meaning. The mapping as built:
 | `value` / `type` | Value pattern | `AXValue` |
 | `tray` | notification-area `NotifyItemIcon`, overflow window | every process's `AXExtrasMenuBar` items, by tooltip (`AXHelp`), title, description, then owner name |
 | `foreground` | `GetForegroundWindow` | the app answering `AXFrontmost`, and its `AXFocusedWindow` |
-| `shot` / window list | FlaUI capture | `Glimpse.Core`'s window finder and `screencapture`, scaled to screen points |
+| window list | `Glimpse.Core`'s window finder (`EnumWindows`), visible frame bounds | `Glimpse.Core`'s window finder (the window server) |
+| `shot` | FlaUI capture | `screencapture`, scaled to screen points |
 | `closetab` | Chrome's address bar via UIA | Chrome's address bar via AX |
 
 Three macOS answers are not the obvious API. The system-wide element's `AXFocusedApplication` refuses a
