@@ -13,7 +13,7 @@ public static class Cli
     public const string Usage = """
         glimpse-drive <command> ...    (exit 0 = ok, 1 = assertion/lookup failed, 2 = watchdog)
 
-        Window keys: AutomationId or exact Name; "~text" = Name contains text;
+        Window keys: an id or exact name; "~text" = name contains text;
                      "@Anchor/Key" = Key inside the window that contains Anchor;
                      "Parent>Key" = Key inside the element Parent.
 

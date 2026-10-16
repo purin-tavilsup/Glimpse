@@ -12,7 +12,7 @@ they must not use the computer during a run.
 | OS | Driver | Status |
 |---|---|---|
 | Windows | UI Automation (FlaUI) | ready |
-| macOS | Accessibility API | not built yet: every window command fails with "no desktop driver"; `aspire` and `run` work |
+| macOS | Accessibility API (AXUIElement) | ready; see [macOS](#macos) for its permissions and differences |
 
 ```bash
 glimpse-drive            # prints every command
@@ -46,8 +46,10 @@ looking for, and skimming a partial dump misses it.
 
 ## Keys
 
-`AutomationId` or exact `Name`; `~text` = Name contains; `@Anchor/Key` = Key inside the window holding Anchor;
-`Parent>Key` = Key inside the element Parent (chains, and combines with `@`).
+An id or exact name; `~text` = name contains; `@Anchor/Key` = Key inside the window holding Anchor;
+`Parent>Key` = Key inside the element Parent (chains, and combines with `@`). On Windows the id is the
+`AutomationId` and the name the `Name`; on macOS the id is `AXIdentifier` and the name is any of the title, the
+description or the value, or the subrole without its `AX` prefix (a window's close button is `CloseButton` on both).
 Use `@` whenever ids repeat across windows, and `>` when they repeat inside one (WinForms custom text boxes all
 wrap an Edit named `textBox1`). Apps with a custom window template often give every window the same
 title-bar ids (e.g. `CloseButton`). `keys` and `controls` pick a window by **title**, so use them only on titled
@@ -65,6 +67,7 @@ WinForms answers UI Automation on its UI thread, and a button that calls `ShowDi
 and fails with "the button probably opened a modal — the press DID happen, use `click`". The dialog is real and
 on screen; carry on against it (close it with `invoke`, which is fine for a button that *closes* a dialog).
 Rule of thumb: **`click` a button that opens a modal, `invoke` one that closes it or stays on the same screen.**
+On macOS the press gives up by itself once the app stops answering, with the same message.
 
 ## Browsers
 
@@ -84,6 +87,26 @@ Rule of thumb: **`click` a button that opens a modal, `invoke` one that closes i
 - **Close every tab the app opened once its step is checked**: `closetab <urlPart[,urlPart]>`. It is the
   person's own browser, so tabs pile up across runs. It closes only while the *active* tab's address matches,
   so name the app's own hosts and ports (never a bare `localhost:`, which can match the person's tabs).
+
+## macOS
+
+- **Permissions first.** The app that runs `glimpse-drive` (your terminal, or whatever hosts the agent) needs
+  **Accessibility** in System Settings → Privacy & Security; without it every window command fails naming that
+  setting. `shot` also needs **Screen Recording** for the same app. Both belong to that app, so a rebuild of the
+  driver keeps them.
+- **`<proc>` is the process name** (`TextEdit`, `Google Chrome`, an app bundle's executable), which can differ from
+  the name in the Dock. `windows` prints the process name of every window.
+- **Menus are not windows.** An open context menu, a status item's open menu and the Dock's icons are children of
+  their app, so lookups find them (`invoke Dock "<app name>"` clicks a Dock icon) while `expect` and `hold` never
+  count them.
+- **`tray`** matches a status item's tooltip, title or description, and then the process that owns it, because
+  many status items expose no text at all (`tray Docker`). An open status menu stays open until you pick an item
+  or click elsewhere; pressing the icon again does not close it.
+- **`type` sets the element's value**, as the Value pattern does on Windows. A field that refuses it fails the
+  step; `click` it and use `keys` instead.
+- **`shot`** without a window takes the main display only. Images are scaled to screen points, so on a Retina
+  display too, screen point = printed origin + image pixel.
+- A **minimized** window does not count as visible, and neither does any window of a hidden app.
 
 ## Common mistakes
 

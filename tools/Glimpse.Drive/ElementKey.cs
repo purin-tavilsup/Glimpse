@@ -1,7 +1,7 @@
 namespace Glimpse.Drive;
 
 /// <summary>
-/// A key naming one element: an AutomationId or exact Name, <c>~text</c> for a Name that contains text, and
+/// A key naming one element: an id or exact name, <c>~text</c> for a name that contains text, and
 /// <c>Parent&gt;Key</c> for Key inside Parent. <c>@Anchor/Key</c> first picks the window that holds Anchor,
 /// because several windows often share ids (every title bar has a CloseButton).
 /// </summary>

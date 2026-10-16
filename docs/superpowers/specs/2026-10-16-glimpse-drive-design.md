@@ -18,12 +18,13 @@ tools/Glimpse.Drive/
   WindowSet.cs        shared: the `expect` / `hold` assertions
   Aspire.cs           shared: .NET Aspire dashboard start/stop (Playwright)
   Windows/            Windows driver: UI Automation (FlaUI) + Win32
-  MacOS/              macOS driver (not built yet)
+  MacOS/              macOS driver: Accessibility API (AXUIElement) + CoreGraphics
 drive-plugin/         the Claude Code plugin: bin/ wrappers + the driving-desktop-apps skill
 ```
 
 The project multi-targets `net10.0;net10.0-windows`. `Windows/` and FlaUI build only into `net10.0-windows`,
-because UI Automation needs a Windows target. Every other OS runs the `net10.0` build. The test project binds to
+because UI Automation needs a Windows target. Every other OS runs the `net10.0` build, which holds `MacOS/` and
+the `Glimpse.Core` window list it reads. The test project binds to
 `net10.0`, so the shared logic is tested on every CI leg.
 
 **Why the assertions are shared:** `expect` and `hold` decide whether a step passed. If each driver implemented
@@ -49,32 +50,39 @@ Each `IDesktopDriver` member backs one command; its XML docs are the detailed co
 - **Exit codes** come from `Cli`: 0 ok, 1 assertion or lookup failed, 2 watchdog. A driver throws; it never exits.
 - **The watchdog** abandons a step whose accessibility call stopped answering. `Program.cs` hands `Cli` an
   `onWatchdog` report for the OS that lists the process's visible windows **without** going through the
-  accessibility API, which is what is stuck (Windows uses `EnumWindows`).
+  accessibility API, which is what is stuck (Windows uses `EnumWindows`, macOS the window server's list).
 
-## Adding a driver (macOS next)
+## Adding a driver
 
-1. `MacOS/MacDesktopDriver.cs` implementing `IDesktopDriver` over the Accessibility API (AXUIElement), and pick
-   it in `Program.cs` when `OperatingSystem.IsMacOS()`.
-2. A watchdog report for macOS that does not touch the app's accessibility tree (for example the window list
-   from CoreGraphics).
-3. `drive-plugin/bin/glimpse-drive` (bash, kept LF in `.gitattributes`) building and running the `net10.0`
-   build, the way `plugin/bin/glimpse` does, and `scripts/install.sh` linking `drive-plugin`.
-4. A row in the skill's OS table, plus any macOS-only traps it finds (permissions first).
+1. `<OS>/<OS>DesktopDriver.cs` implementing `IDesktopDriver` over that OS's accessibility API, picked in
+   `Program.cs` by `OperatingSystem.Is<OS>()`.
+2. A watchdog report that does not touch the app's accessibility tree.
+3. A wrapper in `drive-plugin/bin/` that builds and runs the driver's target, and a line in the install script
+   that links `drive-plugin`.
+4. A row in the skill's OS table, plus that OS's traps (permissions first).
 
-Where the two APIs differ, keep the command's meaning and note the mapping in the skill:
+Where the APIs differ, a command keeps its meaning. The mapping as built:
 
-| Command needs | Windows | macOS starting point |
+| Command needs | Windows | macOS |
 |---|---|---|
-| element id / name | AutomationId / Name | `AXIdentifier` / `AXTitle` or `AXDescription` |
-| `invoke` | Invoke pattern | `AXPress` action |
+| element id / name | AutomationId / Name | `AXIdentifier` / `AXTitle`, `AXDescription`, `AXValue`, or the subrole without `AX` |
+| lookups search | top-level windows (menus are windows) | windows, then the app's open menus, its Dock list and its status-item menus |
+| `invoke` | Invoke pattern | `AXPress` |
 | `value` / `type` | Value pattern | `AXValue` |
-| `tray` | notification-area `NotifyItemIcon`, overflow window | status-bar items (`AXMenuBarItem` of the app's extras) |
-| `foreground` | `GetForegroundWindow` | frontmost app + its `AXFocusedWindow` |
-| `shot` / window list | FlaUI capture | the window finder and capturer `Glimpse.Core` already has for macOS |
+| `tray` | notification-area `NotifyItemIcon`, overflow window | every process's `AXExtrasMenuBar` items, by tooltip (`AXHelp`), title, description, then owner name |
+| `foreground` | `GetForegroundWindow` | the app answering `AXFrontmost`, and its `AXFocusedWindow` |
+| `shot` / window list | FlaUI capture | `Glimpse.Core`'s window finder and `screencapture`, scaled to screen points |
 | `closetab` | Chrome's address bar via UIA | Chrome's address bar via AX |
 
+Three macOS answers are not the obvious API. The system-wide element's `AXFocusedApplication` refuses a
+command-line caller, so `foreground` asks the apps that have windows on screen. The window server draws status
+items itself, so no window names their owner and `tray` asks every process. And a `screencapture` image is in
+backing pixels, so `shot` scales it to points, the unit mouse events use, which keeps
+"screen pixel = origin + image pixel" true on a Retina display.
+
 The process running the driver needs the Accessibility permission (System Settings → Privacy & Security →
-Accessibility) on macOS. A driver should fail with a message naming that permission rather than "not found".
+Accessibility) on macOS, and Screen Recording for `shot`. The driver fails with a message naming the
+Accessibility permission rather than "not found".
 
 ## Not in this change
 
