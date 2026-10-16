@@ -21,7 +21,7 @@ public class WindowListingTests
     [Fact]
     public void FormatRow_WithAnOffScreenWindow_ShouldMarkItNotSelectable()
     {
-        var window = new WindowInfo(42, "My App", 1, "Sign in", 0, 0, 700, 300, 0, false);
+        var window = new WindowInfo(42, "Sample App", 1, "Sign in", 0, 0, 700, 300, 0, false);
 
         var row = WindowListing.FormatRow(window);
 
@@ -31,7 +31,7 @@ public class WindowListingTests
     [Fact]
     public void FormatRow_WithASelectableWindow_ShouldNotMarkIt()
     {
-        var window = new WindowInfo(43, "My App", 1, "Sign in", 0, 0, 700, 300, 0, true);
+        var window = new WindowInfo(43, "Sample App", 1, "Sign in", 0, 0, 700, 300, 0, true);
 
         var row = WindowListing.FormatRow(window);
 

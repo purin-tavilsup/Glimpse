@@ -72,11 +72,11 @@ public class WindowSelectorTests
         // macOS-shaped filter excludes it without WindowSelector needing to change.
         var windows = new[]
         {
-            Win(50, "MyApp", "tooltip", layer: 1),
-            Win(51, "MyApp", "My App", w: 1400, h: 900),
+            Win(50, "SampleApp", "tooltip", layer: 1),
+            Win(51, "SampleApp", "Sample App", w: 1400, h: 900),
         };
 
-        var result = WindowSelector.SelectFrontmost(windows, "MyApp");
+        var result = WindowSelector.SelectFrontmost(windows, "SampleApp");
 
         Assert.Equal(51L, result!.WindowId);
     }
@@ -86,11 +86,11 @@ public class WindowSelectorTests
     {
         var windows = new[]
         {
-            Win(60, "MyApp", "ghost", onScreen: false),   // DWM-cloaked
-            Win(61, "MyApp", "My App", w: 1400, h: 900),
+            Win(60, "SampleApp", "ghost", onScreen: false),   // DWM-cloaked
+            Win(61, "SampleApp", "Sample App", w: 1400, h: 900),
         };
 
-        var result = WindowSelector.SelectFrontmost(windows, "MyApp");
+        var result = WindowSelector.SelectFrontmost(windows, "SampleApp");
 
         Assert.Equal(61L, result!.WindowId);
     }
@@ -103,7 +103,7 @@ public class WindowSelectorTests
     public void IsSelectable_WithAWindowTheSelectorSkips_ShouldReturnFalse(
         int layer, int width, int height, bool onScreen)
     {
-        var window = Win(70, "MyApp", w: width, h: height, layer: layer, onScreen: onScreen);
+        var window = Win(70, "SampleApp", w: width, h: height, layer: layer, onScreen: onScreen);
 
         Assert.False(WindowSelector.IsSelectable(window));
     }
@@ -111,7 +111,7 @@ public class WindowSelectorTests
     [Fact]
     public void IsSelectable_WithANormalWindowAtTheSizeFloor_ShouldReturnTrue()
     {
-        var window = Win(71, "MyApp", w: 50, h: 50);
+        var window = Win(71, "SampleApp", w: 50, h: 50);
 
         Assert.True(WindowSelector.IsSelectable(window));
     }
