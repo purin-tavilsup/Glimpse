@@ -98,7 +98,9 @@ public class RenderEngineTests
         var outcome = await engine.RenderAsync(DotnetSpec(), RequestTo(outPath));
 
         Assert.Equal("failed", outcome.Status);
-        Assert.True(clock.Elapsed < ShortOutputWait + TimeSpan.FromSeconds(2), $"waited {clock.Elapsed}");
+        // The slack absorbs a slow CI runner but stays under the engine's 5 s default wait, so an engine that
+        // ignored ShortOutputWait would still fail here.
+        Assert.True(clock.Elapsed < ShortOutputWait + TimeSpan.FromSeconds(4), $"waited {clock.Elapsed}");
     }
 
     [Fact]

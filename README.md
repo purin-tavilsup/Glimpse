@@ -6,6 +6,8 @@
 
 Code agents are good at writing UI and diagrams — but they can't *see* the result, so they iterate blind. Glimpse closes that loop. It turns any artifact into a PNG through a uniform pipeline, runs cheap mechanical checks (blank / single-color / missing render), and records it so an agent (or you) can read the image, judge it against intent, fix the source, and re-render until it's right.
 
+For a running desktop app, looking is half the job: someone also has to click through it. `glimpse-drive` lets the agent do that itself — click, type, close dialogs, use the tray — and assert which windows are visible, so an end-to-end check needs no human clicks (see [Driving desktop apps](#driving-desktop-apps)).
+
 The judgment stays human (or agent); Glimpse just makes every turn fast, stable, and honest.
 
 ![Glimpse architecture](docs/diagrams/glimpse-architecture.png)
@@ -59,20 +61,21 @@ The renderer is inferred from the file extension, or set explicitly with `--rend
 
 ## Platforms
 
-Glimpse runs on **macOS and Windows**. All five renderers work on both; only the
-underlying mechanism differs, and only for `app`:
+Glimpse runs on **macOS and Windows**. All five renderers and every `glimpse-drive` command work on both;
+only the underlying mechanism differs, for `app` and the desktop driver:
 
 | | macOS | Windows |
 |---|---|---|
 | `app` capture | `screencapture` | in-process GDI (`PrintWindow`) |
-| Permission needed | Screen Recording, for `app` | none |
+| `glimpse-drive` | Accessibility API | UI Automation |
+| Permission needed | Screen Recording, for `app`; Accessibility, for `glimpse-drive` | none |
 | Diagram tools | `brew install graphviz d2` | `winget install Graphviz.Graphviz Terrastruct.d2` |
 
-`mmdc` is `npm i -g @mermaid-js/mermaid-cli` on both. Linux is untested and unclaimed —
-diagram renderers should work, `app` will not.
+`mmdc` is `npm i -g @mermaid-js/mermaid-cli` on both. `glimpse-drive aspire` drives an installed Edge or
+Chrome. Linux is untested and unclaimed — diagram renderers should work, `app` and `glimpse-drive` will not.
 
 CI builds and runs the unit tests on both OSes. That proves both compile and the shared logic
-passes; it does not prove live capture, which needs a real desktop and is verified by hand.
+passes; it does not prove live capture or driving, which need a real desktop and are verified by hand.
 
 ## Quick start
 
@@ -141,10 +144,19 @@ The architecture diagram above was produced by running exactly this loop on Glim
 
 ## Driving desktop apps
 
-Glimpse lets an agent *look*; `glimpse-drive` lets it *act*. It operates a running desktop app through the OS's
-accessibility API — click, type, close dialogs, use the tray — and asserts which windows are visible, so an
-end-to-end check needs no human clicks. The [`driving-desktop-apps`](drive-plugin/skills/driving-desktop-apps/SKILL.md)
-skill teaches the act-then-assert loop; run `glimpse-drive` with no arguments for every command.
+Glimpse lets an agent *look*; `glimpse-drive` lets it *act*, through the OS's accessibility API. The
+[`driving-desktop-apps`](drive-plugin/skills/driving-desktop-apps/SKILL.md) skill teaches the act-then-assert loop;
+run `glimpse-drive` with no arguments for every command.
+
+```bash
+glimpse-drive wait MyApp EmailTextBox 30                 # wait for the app, never a fixed sleep
+glimpse-drive type MyApp EmailTextBox me@example.com
+glimpse-drive invoke MyApp SubmitButton
+glimpse-drive expect MyApp ResultPanel                   # exactly one visible window: the one holding ResultPanel
+```
+
+Each step acts, then asserts the *whole* set of visible windows, so a window that should have stayed hidden fails
+the step instead of slipping by.
 
 It is one CLI with the same commands everywhere and one driver per OS: UI Automation on Windows, the
 Accessibility API on macOS. [The design](docs/superpowers/specs/2026-10-16-glimpse-drive-design.md) describes
@@ -185,8 +197,9 @@ dotnet test Glimpse.slnx
 ```
 
 The test suite includes a real mermaid end-to-end gate that renders an actual diagram and asserts it's non-blank (it skips automatically if `mmdc` isn't installed).
-Tests in `Category=RealDesktop` capture real windows, so they need a desktop session; CI runs
-`--filter "Category!=RealDesktop"`.
+Tests in `Category=RealDesktop` capture or drive real windows, so they need a desktop session; CI runs
+`--filter "Category!=RealDesktop"`. `Glimpse.Drive.Windows.Tests` checks the Windows driver against UI Automation
+itself, so `dotnet test` skips it on other OSes.
 
 ## Releasing
 
