@@ -31,8 +31,8 @@ The plugin pins a released CLI version. Its first run downloads that version fro
 `dotnet dnx Glimpse.Capture`. The command is `glimpse`.
 
 **From a clone**, to work on Glimpse itself: `./scripts/install.sh` (macOS, a symlink) or
-`./scripts/install.ps1` (Windows, a junction, so no admin needed; it also puts `glimpse` on your user
-PATH) links the plugin to your clone, so `glimpse` runs the code you are editing: it rebuilds whenever the source changed.
+`./scripts/install.ps1` (Windows, a junction, so no admin needed; it also puts `glimpse` and `glimpse-drive`
+on your user PATH) links the plugins to your clone, so they run the code you are editing: each rebuilds whenever its source changed.
 
 ## How it works
 
@@ -130,6 +130,18 @@ design a clear diagram, and [`glimpse`](plugin/skills/glimpse/SKILL.md) packages
 
 The architecture diagram above was produced by running exactly this loop on Glimpse itself.
 
+## Driving desktop apps
+
+Glimpse lets an agent *look*; `glimpse-drive` lets it *act*. It operates a running desktop app through the OS's
+accessibility API — click, type, close dialogs, use the tray — and asserts which windows are visible, so an
+end-to-end check needs no human clicks. The [`driving-desktop-apps`](drive-plugin/skills/driving-desktop-apps/SKILL.md)
+skill teaches the act-then-assert loop; run `glimpse-drive` with no arguments for every command.
+
+It is one CLI with the same commands everywhere and one driver per OS. Windows (UI Automation) is ready; the
+macOS driver is not built yet. The `glimpse-drive` plugin installs from a clone only for now: `install.ps1`
+links it next to `glimpse`. [The design](docs/superpowers/specs/2026-10-16-glimpse-drive-design.md) describes
+the contract a new OS driver implements.
+
 ## Project layout
 
 ```
@@ -141,7 +153,9 @@ src/
   Glimpse.Avalonia*/             headless Avalonia rendering engine (optional renderer)
 tools/
   Glimpse.Capture/               the CLI, packed as the Glimpse.Capture .NET tool
-plugin/                          the Claude Code plugin: bin/ wrappers + the two skills
+  Glimpse.Drive/                 glimpse-drive: shared commands + one desktop driver per OS
+plugin/                          the glimpse Claude Code plugin: bin/ wrappers + the two skills
+drive-plugin/                    the glimpse-drive plugin: bin/ wrapper + the driving-desktop-apps skill
 .claude-plugin/                  marketplace manifest, so the repo is installable
 samples/
   Glimpse.ScratchConsole/        scratch app for trying the Avalonia renderer
