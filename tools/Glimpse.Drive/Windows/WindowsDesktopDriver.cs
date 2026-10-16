@@ -18,13 +18,11 @@ internal sealed class WindowsDesktopDriver : IDesktopDriver
     public void ListWindows(string[]? processNames)
     {
         var i = 0;
-        foreach (var w in Automation().GetDesktop().FindAllChildren())
+        foreach (var w in WindowList.AppWindows())
         {
-            var p = w.Properties;
-            var proc = ProcessName(p.ProcessId.ValueOrDefault);
-            if (processNames == null || processNames.Contains(proc, StringComparer.OrdinalIgnoreCase))
+            if (processNames == null || processNames.Contains(w.OwnerName, StringComparer.OrdinalIgnoreCase))
             {
-                Console.WriteLine($"#{i} {proc} '{p.Name.ValueOrDefault}' rect={p.BoundingRectangle.ValueOrDefault}");
+                Console.WriteLine($"#{i} {w.OwnerName} '{w.Title}' rect={new System.Drawing.Rectangle(w.X, w.Y, w.Width, w.Height)}");
             }
             i++;
         }
@@ -184,9 +182,23 @@ internal sealed class WindowsDesktopDriver : IDesktopDriver
 
     private static IEnumerable<AutomationElement> TopWindows(string proc)
     {
-        var pids = System.Diagnostics.Process.GetProcessesByName(proc).Select(p => p.Id).ToHashSet();
-        return Automation().GetDesktop().FindAllChildren()
-            .Where(w => pids.Contains(w.Properties.ProcessId.ValueOrDefault) && !w.Properties.IsOffscreen.ValueOrDefault);
+        var automation = Automation();
+        return WindowList.Of(proc)
+            .Select(w => ElementOf(automation, w))
+            .OfType<AutomationElement>()
+            .Where(e => !e.Properties.IsOffscreen.ValueOrDefault);
+    }
+
+    private static AutomationElement? ElementOf(UIA3Automation automation, Glimpse.Core.WindowInfo window)
+    {
+        try
+        {
+            return automation.FromHandle(new IntPtr(window.WindowId));
+        }
+        catch (System.Runtime.InteropServices.COMException)
+        {
+            return null; // the window closed between the listing and this lookup
+        }
     }
 
     private static AutomationElement Find(string proc, string key, TimeSpan? timeout = null)
