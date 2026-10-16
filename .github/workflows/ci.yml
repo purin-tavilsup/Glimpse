@@ -34,3 +34,12 @@ jobs:
       # lacks; they keep their strict assertions and run locally instead.
       - name: Test
         run: dotnet test Glimpse.slnx --no-build -c Release --filter "Category!=RealDesktop" --logger "console;verbosity=normal"
+
+      # Git Bash runs the bash wrapper on Windows too, so both wrappers must reach the Windows driver.
+      # `expect` on a process that isn't running needs the driver but no window on screen.
+      - name: Drive wrappers reach the Windows driver
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          drive-plugin/bin/glimpse-drive expect no-such-process none 1
+          cmd.exe //d //c "drive-plugin\\bin\\glimpse-drive.cmd expect no-such-process none 1"
