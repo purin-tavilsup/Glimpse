@@ -1,0 +1,6 @@
+{
+  "name": "glimpse-drive",
+  "description": "Let an agent operate a running desktop app itself — click, type, close dialogs, use the tray, and assert which windows are visible — with the glimpse-drive CLI and the driving-desktop-apps skill.",
+  "version": "0.1.0",
+  "author": { "name": "Purin Tavilsup" }
+}
