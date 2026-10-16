@@ -19,7 +19,7 @@
 - **No behaviour change on macOS.** The `screencapture` argument list and `WindowSelector` semantics must stay identical.
 - **Test naming:** `Method_Condition_ShouldExpectedBehavior`. Arrange/Act/Assert separated by blank lines. No `#region`.
 - **Functions ≤20 lines, ≤3 parameters, do one thing.** Group related parameters into a `record` rather than adding a fourth.
-- **Commit identity:** this repo has a local override (`Purin Tavilsup <19279956+purin-tavilsup@users.noreply.github.com>`). Do not change it; do not commit as the Work identity.
+- **Commit identity:** this repo has a local override (`Purin Tavilsup <19279956+purin-tavilsup@users.noreply.github.com>`). Do not change it; do not commit as a work identity.
 - **Verify before claiming.** Every task's final step runs the real command and reads the real output.
 
 **Baseline, measured on Windows 11 on 2026-08-01 before any change:**

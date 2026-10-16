@@ -40,6 +40,7 @@ public class WindowsWindowFinderTests
         Assert.All(selectable, w =>
         {
             Assert.False(string.IsNullOrWhiteSpace(w.OwnerName));
+            Assert.True(w.OwnerPid > 0);
             Assert.NotEqual(0, w.WindowId);
             Assert.True(w.Width > 0 && w.Height > 0);
         });

@@ -1,14 +1,16 @@
 # Build outputs
 bin/
-# ...but the plugin's committed CLI wrapper is source, not build output
+# ...but the plugins' committed CLI wrappers are source, not build output
 !plugin/bin/
 !plugin/bin/glimpse
+!drive-plugin/bin/
 obj/
 *.user
 .vs/
 
-# Written by scripts/install.ps1 — machine-specific repo path for the Windows wrapper.
+# Written by scripts/install.ps1 — machine-specific repo path for the Windows wrappers.
 plugin/bin/glimpse.repo
+drive-plugin/bin/glimpse-drive.repo
 
 # NuGet
 *.nupkg

@@ -21,7 +21,7 @@ distribution: `glimpse.cmd`, `install.ps1` (junction, no admin), `PackAsTool`. C
 `windows-latest` × `macos-latest`; desktop-bound tests are `Category=RealDesktop` and run locally
 only. `--list-windows` marks rows `WindowSelector.IsSelectable` rejects. Docs are per-platform.
 
-**Final-review fix round (2026-10-01):** untitled windows are listed (the MyApp's Avalonia
+**Final-review fix round (2026-10-01):** untitled windows are listed (an Avalonia app's
 prompt has `Title=""` and was invisible); the engine waits for a PNG a tool writes just after it
 exits (headless Chrome on Windows, ~1 in 5 renders); `web` passes Chrome a `file://` URL, so a
 relative source works; the sidecar is UTF-8 read under code page 65001 and the installer checks

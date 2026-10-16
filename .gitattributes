@@ -5,6 +5,7 @@
 # "bad interpreter: /usr/bin/env bash^M", which kills the glimpse command.
 *.sh          text eol=lf
 plugin/bin/glimpse text eol=lf
+drive-plugin/bin/glimpse-drive text eol=lf
 
 # Windows scripts MUST be CRLF. cmd.exe mis-parses LF-only batch files,
 # especially labels and goto.

@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <AvaloniaVersion>11.3.17</AvaloniaVersion><!-- pinned to the patch already cached/used by MyApp -->
+    <AvaloniaVersion>11.3.17</AvaloniaVersion><!-- pinned to one patch so every Avalonia package resolves the same version -->
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Avalonia" Version="$(AvaloniaVersion)" />
@@ -13,5 +13,7 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageVersion Include="SkiaSharp" Version="2.88.9" />
     <PackageVersion Include="Xunit.SkippableFact" Version="1.5.23" />
+    <PackageVersion Include="FlaUI.UIA3" Version="5.0.0" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.55.0" />
   </ItemGroup>
 </Project>

@@ -16,7 +16,7 @@ while keeping this repo the single source of truth.
 
 **Key scoping insight (from brainstorm):** the high-value uses need *zero* coupling to
 MyApp's code — making diagrams (diagram-design) and screenshotting the *running*
-MyApp app (`glimpse --renderer app --window "MyApp"`) both work with only
+MyApp (`glimpse --renderer app --window "MyApp"`) both work with only
 distribution. The headless render of MyApp's own Avalonia components (the "preview
 console") is a separate, still-deferred problem and is **out of scope** here.
 

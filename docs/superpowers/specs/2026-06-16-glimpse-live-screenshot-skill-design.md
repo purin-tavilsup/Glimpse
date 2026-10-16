@@ -202,7 +202,7 @@ app, then re-run.** First-run UX is "grant once."
     stable-name overwrite produces no accumulation across runs.
   - `CaptureManifest` round-trip (atomic write).
 - **Integration (manual — needs macOS TCC + a live window):** capture a real running
-  app end-to-end (e.g. Safari or the MyApp app), confirm the PNG shows that window
+  app end-to-end (e.g. Safari or MyApp), confirm the PNG shows that window
   and the manifest's resolved id/title are correct. Not unit-tested (TCC + a live window
   can't run headless/CI).
 
