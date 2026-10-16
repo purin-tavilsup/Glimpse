@@ -11,14 +11,16 @@ they must not use the computer during a run.
 
 | OS | Driver | Status |
 |---|---|---|
-| Windows | UI Automation (FlaUI) | ready |
+| Windows | UI Automation | ready |
 | macOS | Accessibility API (AXUIElement) | ready; see [macOS](#macos) for its permissions and differences |
 
 ```bash
 glimpse-drive            # prints every command
 ```
 
-The plugin's wrapper builds the driver from your clone the first time and again whenever its source changes.
+Installed from the marketplace, the plugin runs the CLI version it pins: the first call downloads it through
+`dotnet dnx`, so it takes a few seconds longer. Linked to a clone, it builds the clone instead, and rebuilds
+whenever the source changes.
 
 ## Each step = act, then assert the whole window set
 
@@ -71,17 +73,17 @@ On macOS the press gives up by itself once the app stops answering, with the sam
 
 ## Browsers
 
-- **Pages the agent opens itself** (the .NET Aspire dashboard, local admin pages): Playwright with
-  `Channel = "msedge"`, so there's no browser download. `aspire` already does the dashboard. Its login URL
+- **Pages the agent opens itself** (the .NET Aspire dashboard, local admin pages): the installed Edge or
+  Chrome, driven headless, so there's no browser download. `aspire` already does the dashboard. Its login URL
   (`/login?t=<token>`) is in the AppHost console and is new every run.
 - **Pages the app opens in the default browser** (OAuth/OIDC sign-in): Chrome hides web content from UI
   Automation, and the page is usually tied to that browser's cookies (`/interaction/<id>`), so it can't be
-  replayed in Playwright. Read the URL with `value chrome "Address and search bar"`. Shoot the page's window
+  replayed in a separate headless browser. Read the URL with `value chrome "Address and search bar"`. Shoot the page's window
   with `shot <file> chrome "<tab title>"`: it brings that window to the front, so no other window covers the
   button you then click. Screen pixel = printed origin + image pixel; if Read downscaled the shot ("multiply by
   2.24"), multiply first. `clickat x y` the button, `keys` into the focused field, and re-shoot after each page
   (email → password → maybe consent). A password manager badge can take focus, so click the field before typing.
-  Lasting fix: make the app open a Playwright-controlled browser in its dev profile.
+  Lasting fix: make the app open a browser the agent controls in its dev profile.
 - The default browser may still be signed in, so the sign-in page can skip itself. Check the address bar
   (`/callback` = already done).
 - **Close every tab the app opened once its step is checked**: `closetab <urlPart[,urlPart]>`. It is the
@@ -125,7 +127,8 @@ On macOS the press gives up by itself once the app stops answering, with the sam
 
 The driver reads other apps through the accessibility API, which an endpoint-protection product can read as
 cross-process memory access. An unsigned exe doing that from a temp folder also matches a classic malware
-heuristic, which is why the wrapper builds into the clone's `bin/` folder rather than a temp folder.
+heuristic, which is why neither install runs it from a temp folder: a marketplace install runs it from the NuGet
+package cache, a clone from its own `bin/` folder.
 
 If a managed machine's security tool still flags it, do **not** disable or evade it — it's a sanctioned control.
 Report it to whoever runs that tool as a false positive and ask for the driver's path or hash to be allowed.

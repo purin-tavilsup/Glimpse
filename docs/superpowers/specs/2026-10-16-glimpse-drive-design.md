@@ -16,16 +16,18 @@ tools/Glimpse.Drive/
   ElementKey.cs       shared: the key grammar
   StepScript.cs       shared: `.steps` parsing
   WindowSet.cs        shared: the `expect` / `hold` assertions
-  Aspire.cs           shared: .NET Aspire dashboard start/stop (Playwright)
-  Windows/            Windows driver: UI Automation (FlaUI) + Win32
+  Aspire.cs           shared: .NET Aspire dashboard start/stop (installed Edge or Chrome, over DevTools)
+  Windows/            Windows driver: UI Automation (COM interop) + Win32 input
   MacOS/              macOS driver: Accessibility API (AXUIElement) + CoreGraphics
 drive-plugin/         the Claude Code plugin: bin/ wrappers + the driving-desktop-apps skill
 ```
 
-The project multi-targets `net10.0;net10.0-windows`. `Windows/` and FlaUI build only into `net10.0-windows`,
-because UI Automation needs a Windows target. Every other OS runs the `net10.0` build, which holds `MacOS/`. Both
-drivers read the `Glimpse.Core` window list. `Glimpse.Drive.Tests` binds to `net10.0`, so the shared logic is tested
-on every CI leg; `Glimpse.Drive.Windows.Tests` holds the Windows driver's desktop tests and is skipped elsewhere.
+There is one build, `net10.0`, holding every driver; each driver's classes are marked with the OS they run on
+(`[SupportedOSPlatform]`), so the platform analyzer catches a call that would reach the wrong OS. One build is what
+lets the CLI ship as a .NET tool, which can't hold an OS-targeted build. That rules out FlaUI, which ships only
+Windows-targeted builds, so the Windows driver calls UI Automation through `Interop.UIAutomationClient`, which
+targets plain .NET. Both drivers read the `Glimpse.Core` window list. `Glimpse.Drive.Tests` runs on every CI leg;
+`Glimpse.Drive.Windows.Tests` holds the Windows driver's desktop tests and is skipped elsewhere.
 
 **Why the assertions are shared:** `expect` and `hold` decide whether a step passed. If each driver implemented
 them, the same flow could pass on one OS and fail on another for reasons that have nothing to do with the app.
@@ -77,7 +79,7 @@ Where the APIs differ, a command keeps its meaning. The mapping as built:
 | `tray` | notification-area `NotifyItemIcon`, overflow window | every process's `AXExtrasMenuBar` items, by tooltip (`AXHelp`), title, description, then owner name |
 | `foreground` | `GetForegroundWindow` | the app answering `AXFrontmost`, and its `AXFocusedWindow` |
 | window list | `Glimpse.Core`'s window finder (`EnumWindows`), visible frame bounds | `Glimpse.Core`'s window finder (the window server) |
-| `shot` | FlaUI capture | `screencapture`, scaled to screen points |
+| `shot` | `Glimpse.Core`'s capturer (PrintWindow), cropped to the visible frame | `screencapture`, scaled to screen points |
 | `closetab` | Chrome's address bar via UIA | Chrome's address bar via AX |
 
 Three macOS answers are not the obvious API. The system-wide element's `AXFocusedApplication` refuses a
@@ -90,10 +92,11 @@ The process running the driver needs the Accessibility permission (System Settin
 Accessibility) on macOS, and Screen Recording for `shot`. The driver fails with a message naming the
 Accessibility permission rather than "not found".
 
-## Not in this change
+## Distribution and tests
 
-- **Marketplace install.** The plugin works from a clone only. A marketplace install has no clone to build, so
-  it needs a released package (like `Glimpse.Capture` through `dotnet dnx`); that and the `marketplace.json`
-  entry come together in a release change.
-- **Driver tests.** Drivers talk to real windows; like the capture code's `RealDesktop` tests, they would run
-  locally, not on CI. The shared logic is what the unit tests cover.
+- **Release.** The CLI ships as the `Glimpse.Drive` .NET tool, released with `Glimpse.Capture` under one version.
+  A marketplace install has no clone, so the plugin's wrappers run the version they pin through `dotnet dnx`; a
+  clone install builds and runs the clone. The release workflow runs both wrappers from a copy of the plugin
+  alone, on Windows and macOS, and checks that each OS reached its own driver.
+- **Driver tests.** Drivers talk to real windows, so like the capture code's `RealDesktop` tests, their desktop
+  tests run locally, not on CI. The shared logic is what the unit tests cover on every CI leg.

@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- Tests of the Windows driver, which runs only on Windows: `dotnet test` on other operating systems skips
-       this project instead of failing to start it. -->
+       this project instead of failing to start it. FlaUI reads UI Automation as the reference the driver is checked
+       against; the driver itself can't use it (see the drive design), but a test project isn't packed as a tool. -->
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>

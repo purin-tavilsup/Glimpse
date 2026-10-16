@@ -37,7 +37,7 @@ public class WindowListingTests
                        .Select(x => $"{x.proc}: driver [{string.Join("; ", x.actual)}], UI Automation [{string.Join("; ", x.expected)}]")];
     }
 
-    // The way the driver used to find windows, kept here as the reference for which windows count.
+    // UI Automation's own desktop listing, read through FlaUI so the reference shares no code with the driver.
     private static IEnumerable<string> DesktopListingLabels(string proc)
     {
         var pids = Process.GetProcessesByName(proc).Select(p => p.Id).ToHashSet();

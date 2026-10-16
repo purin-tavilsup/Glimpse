@@ -1,7 +1,8 @@
 name: Release
 
-# A v* tag publishes the CLI to nuget.org. Pull requests that touch the packaging run everything except the
-# publish, so the dnx path the plugin relies on is proven on both OSes before a release ever depends on it.
+# A v* tag publishes both CLIs (glimpse and glimpse-drive) to nuget.org. Pull requests that touch the packaging
+# run everything except the publish, so the dnx path the plugins rely on is proven on both OSes before a release
+# ever depends on it.
 on:
   push:
     tags: [ 'v*' ]
@@ -9,7 +10,9 @@ on:
     paths:
       - '.github/workflows/release.yml'
       - 'plugin/**'
+      - 'drive-plugin/**'
       - 'tools/Glimpse.Capture/**'
+      - 'tools/Glimpse.Drive/**'
       - 'src/**'
       - 'Directory.*.props'
 
@@ -34,15 +37,21 @@ jobs:
 
       - name: Verify versions agree
         id: version
-        # The plugin pins the version it runs, so the package, the plugin manifest and the pin must be one
+        # Each plugin pins the version it runs, so both packages, both plugin manifests and both pins must be one
         # version — and on a release, the tag's — or a published plugin would run a different CLI.
         run: |
-          CSPROJ=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' tools/Glimpse.Capture/Glimpse.Capture.csproj)
-          PLUGIN=$(sed -n 's|.*"version": *"\([^"]*\)".*|\1|p' plugin/.claude-plugin/plugin.json)
-          PIN=$(tr -d '[:space:]' < plugin/bin/glimpse.version)
-          echo "csproj=$CSPROJ plugin.json=$PLUGIN glimpse.version=$PIN"
-          if [ "$CSPROJ" != "$PLUGIN" ] || [ "$CSPROJ" != "$PIN" ]; then
-            echo "::error::Versions differ: csproj $CSPROJ, plugin.json $PLUGIN, glimpse.version $PIN"
+          csproj() { sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' "$1"; }
+          manifest() { sed -n 's|.*"version": *"\([^"]*\)".*|\1|p' "$1"; }
+          CSPROJ=$(csproj tools/Glimpse.Capture/Glimpse.Capture.csproj)
+          VERSIONS="Glimpse.Capture=$CSPROJ
+          Glimpse.Drive=$(csproj tools/Glimpse.Drive/Glimpse.Drive.csproj)
+          plugin/plugin.json=$(manifest plugin/.claude-plugin/plugin.json)
+          drive-plugin/plugin.json=$(manifest drive-plugin/.claude-plugin/plugin.json)
+          glimpse.version=$(tr -d '[:space:]' < plugin/bin/glimpse.version)
+          glimpse-drive.version=$(tr -d '[:space:]' < drive-plugin/bin/glimpse-drive.version)"
+          echo "$VERSIONS"
+          if [ "$(printf '%s\n' "$VERSIONS" | cut -d= -f2 | sort -u | wc -l)" -ne 1 ]; then
+            echo "::error::Versions differ: $(echo $VERSIONS)"
             exit 1
           fi
           if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "${GITHUB_REF_NAME#v}" != "$CSPROJ" ]; then
@@ -61,7 +70,9 @@ jobs:
         run: dotnet test Glimpse.slnx --no-build -c Release --filter "Category!=RealDesktop"
 
       - name: Pack
-        run: dotnet pack tools/Glimpse.Capture --no-build -c Release -p:ContinuousIntegrationBuild=true --output artifacts
+        run: |
+          dotnet pack tools/Glimpse.Capture --no-build -c Release -p:ContinuousIntegrationBuild=true --output artifacts
+          dotnet pack tools/Glimpse.Drive --no-build -c Release -p:ContinuousIntegrationBuild=true --output artifacts
 
       - uses: actions/upload-artifact@v4
         with:
@@ -116,6 +127,29 @@ jobs:
           for OUT in "$FIRST" "$SECOND"; do
             if [ "$OUT" != "$VERSION" ]; then
               echo "::error::Expected exactly $VERSION, got '$OUT'"
+              exit 1
+            fi
+          done
+
+      # `expect` on a process that isn't running reaches the OS's driver but no window and no permission prompt,
+      # so it proves the package picked the right driver on each OS. A stray line would break callers here too.
+      - name: Run the packed desktop driver through its plugin's own wrapper
+        shell: bash
+        run: |
+          MKT="$RUNNER_TEMP/marketplace-copy"
+          cp -R drive-plugin "$MKT/drive-plugin"
+          cd "$MKT"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            drive() { cmd.exe //d //c "drive-plugin\\bin\\glimpse-drive.cmd $*"; }
+          else
+            drive() { drive-plugin/bin/glimpse-drive "$@"; }
+          fi
+          FIRST=$(drive expect no-such-process none 1)
+          SECOND=$(drive expect no-such-process none 1)
+          printf 'first run:\n%s\nsecond run:\n%s\n' "$FIRST" "$SECOND"
+          for OUT in "$FIRST" "$SECOND"; do
+            if [ "$OUT" != "PASS windows = none" ]; then
+              echo "::error::Expected exactly 'PASS windows = none', got '$OUT'"
               exit 1
             fi
           done

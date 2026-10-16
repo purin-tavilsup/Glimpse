@@ -21,14 +21,23 @@ Requires the **.NET 10 SDK** on Windows or macOS, plus the tool for whichever re
 /plugin install glimpse --marketplace purin-tavilsup/Glimpse
 ```
 
-On Claude Code older than 2.1.275, add the marketplace first:
-`/plugin marketplace add purin-tavilsup/Glimpse`, then `/plugin install glimpse@glimpse`.
+And for the desktop driver (the CLI plus the `driving-desktop-apps` skill, see
+[Driving desktop apps](#driving-desktop-apps)):
 
-The plugin pins a released CLI version. Its first run downloads that version from NuGet through
+```
+/plugin install glimpse-drive --marketplace purin-tavilsup/Glimpse
+```
+
+On Claude Code older than 2.1.275, add the marketplace first:
+`/plugin marketplace add purin-tavilsup/Glimpse`, then `/plugin install glimpse@glimpse` or
+`/plugin install glimpse-drive@glimpse`.
+
+Each plugin pins a released CLI version. Its first run downloads that version from NuGet through
 `dotnet dnx` and later runs use the local copy.
 
-**As a .NET tool**, without Claude Code: `dotnet tool install -g Glimpse.Capture`, or run it once with
-`dotnet dnx Glimpse.Capture`. The command is `glimpse`.
+**As .NET tools**, without Claude Code: `dotnet tool install -g Glimpse.Capture` (the command is `glimpse`)
+and `dotnet tool install -g Glimpse.Drive` (the command is `glimpse-drive`), or run either once with
+`dotnet dnx`.
 
 **From a clone**, to work on Glimpse itself: `./scripts/install.sh` (macOS, a symlink) or
 `./scripts/install.ps1` (Windows, a junction, so no admin needed; it also puts `glimpse` and `glimpse-drive`
@@ -138,9 +147,8 @@ end-to-end check needs no human clicks. The [`driving-desktop-apps`](drive-plugi
 skill teaches the act-then-assert loop; run `glimpse-drive` with no arguments for every command.
 
 It is one CLI with the same commands everywhere and one driver per OS: UI Automation on Windows, the
-Accessibility API on macOS. The `glimpse-drive` plugin installs from a clone only for now: `install.sh` and
-`install.ps1` link it next to `glimpse`. [The design](docs/superpowers/specs/2026-10-16-glimpse-drive-design.md)
-describes the contract each OS driver implements.
+Accessibility API on macOS. [The design](docs/superpowers/specs/2026-10-16-glimpse-drive-design.md) describes
+the contract each OS driver implements.
 
 ## Project layout
 
@@ -182,12 +190,13 @@ Tests in `Category=RealDesktop` capture real windows, so they need a desktop ses
 
 ## Releasing
 
-Set the same version in `tools/Glimpse.Capture/Glimpse.Capture.csproj`, `plugin/.claude-plugin/plugin.json`
-and `plugin/bin/glimpse.version`, merge, then push a `v<version>` tag. The release workflow refuses
-mismatched versions, runs the tests, checks the package through `dotnet dnx` on Windows and macOS, and
-publishes it to NuGet.
+Both CLIs share one version. Set it in `tools/Glimpse.Capture/Glimpse.Capture.csproj`,
+`tools/Glimpse.Drive/Glimpse.Drive.csproj`, both plugins' `.claude-plugin/plugin.json`, `plugin/bin/glimpse.version`
+and `drive-plugin/bin/glimpse-drive.version`, merge, then push a `v<version>` tag. The release workflow refuses
+mismatched versions, runs the tests, checks both packages through their plugins' own wrappers and `dotnet dnx` on
+Windows and macOS, and publishes them to NuGet.
 
-Push the tag straight after merging the version bump: the plugin on `main` already pins the new version,
+Push the tag straight after merging the version bump: the plugins on `main` already pin the new version,
 so a fresh install fails with "not found" until it is on NuGet. nuget.org also lists a new version in
 stages, and `dnx` finds it only at the last one. For 0.1.0 that took about ten minutes after publishing.
 NuGet's local HTTP cache can keep an earlier "not found" for about half an hour, so when checking a

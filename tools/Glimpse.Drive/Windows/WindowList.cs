@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Glimpse.Core;
 
 namespace Glimpse.Drive.Windows;
@@ -7,6 +8,7 @@ namespace Glimpse.Drive.Windows;
 /// UI Automation's desktop listing does: it sometimes takes tens of seconds, which is why the driver reads windows
 /// from here and builds UI Automation elements only for the windows of the app it drives.
 /// </summary>
+[SupportedOSPlatform("windows")]
 internal static class WindowList
 {
     /// <summary>Every visible window that isn't cloaked by the window manager and has a size, front to back.</summary>

@@ -1,30 +1,38 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- One CLI, one desktop driver per OS. The Windows driver needs a Windows target for UI Automation, so it
-       builds only into net10.0-windows; the net10.0 build is the one other operating systems run, so the macOS
-       driver builds only there. Both drivers read the window list from Glimpse.Core. EnableWindowsTargeting lets
-       a non-Windows machine still compile both. TargetFramework is cleared because Directory.Build.props sets it,
-       which would turn off multi-targeting. -->
+  <!-- One CLI with one desktop driver per OS, all in one build: each driver's classes are marked with the OS they
+       run on, and Program.cs picks the one for the running OS. A .NET tool can't hold an OS-targeted build, so the
+       Windows driver uses UI Automation's plain-.NET interop library rather than FlaUI. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework></TargetFramework>
-    <TargetFrameworks>net10.0;net10.0-windows</TargetFrameworks>
-    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+  <!-- The desktop-driving CLI package. Releases publish it to NuGet; a plugin installed from a marketplace runs the
+       version it pins through `dotnet dnx`, and `dotnet tool install` works too. -->
+  <PropertyGroup>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>glimpse-drive</ToolCommandName>
+    <PackageId>Glimpse.Drive</PackageId>
+    <Version>0.2.0</Version>
+    <Authors>Purin Tavilsup</Authors>
+    <Description>Let an agent operate a running desktop app — click, type, close dialogs, use the tray — and assert which windows are visible, on Windows and macOS.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageProjectUrl>https://github.com/purin-tavilsup/Glimpse</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/purin-tavilsup/Glimpse</RepositoryUrl>
+    <PackageTags>ui-automation;accessibility;desktop;testing;agent</PackageTags>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)../../artifacts/nupkg</PackageOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Playwright" />
+    <None Include="..\..\assets\icon.png" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Interop.UIAutomationClient" />
+    <PackageReference Include="PuppeteerSharp" />
     <ProjectReference Include="..\..\src\Glimpse.Core\Glimpse.Core.csproj" />
     <InternalsVisibleTo Include="Glimpse.Drive.Windows.Tests" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
-    <PackageReference Include="FlaUI.UIA3" />
-    <Compile Remove="MacOS/**" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)' != 'net10.0-windows'">
-    <Compile Remove="Windows/**" />
   </ItemGroup>
 
 </Project>

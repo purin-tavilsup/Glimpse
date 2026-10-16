@@ -1,6 +1,7 @@
 @echo off
-rem glimpse-drive on PATH (via the plugin's bin/). Runs the in-repo built Windows driver, rebuilding it
-rem when the source changed so it is always current.
+rem glimpse-drive on PATH (via the plugin's bin/). Runs the in-repo built driver, rebuilding it when the
+rem source changed so it is always current; with no clone around it (a marketplace install), runs the
+rem released tool this plugin pins.
 rem
 rem A junction is transparent to lexical ".." traversal, so from the installed location
 rem (~/.claude/skills/glimpse-drive/bin) "..\..\" resolves to ~/.claude/skills, NOT the repo.
@@ -22,25 +23,28 @@ if "%~1"=="--check-sidecar" (
 if not defined REPO for %%I in ("%BIN%..\..") do set "REPO=%%~fI"
 
 set "PROJECT=%REPO%\tools\Glimpse.Drive\Glimpse.Drive.csproj"
-set "DLL=%REPO%\tools\Glimpse.Drive\bin\Debug\net10.0-windows\Glimpse.Drive.dll"
-if not exist "%PROJECT%" (
-    echo glimpse-drive: no clone found; run scripts\install.ps1 from a Glimpse clone 1>&2
-    exit /b 127
-)
+set "DLL=%REPO%\tools\Glimpse.Drive\bin\Debug\net10.0\Glimpse.Drive.dll"
 where dotnet >nul 2>&1 || (
     echo glimpse-drive: needs the .NET 10 SDK ^(dotnet on PATH^): https://dot.net 1>&2
     exit /b 127
 )
+if not exist "%PROJECT%" goto run_release
 
 rem glimpse-drive-stale.ps1 decides whether to rebuild; the stamp it reads marks a finished build.
 powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%BIN%glimpse-drive-stale.ps1" -Repo "%REPO%" >nul 2>&1
 if errorlevel 1 (
-    dotnet build "%PROJECT%" -f net10.0-windows -v quiet 1>&2
+    dotnet build "%PROJECT%" -v quiet 1>&2
     if errorlevel 1 exit /b 1
     type nul > "%REPO%\tools\Glimpse.Drive\obj\glimpse-drive-wrapper.stamp"
 )
 
 dotnet "%DLL%" %*
+exit /b %errorlevel%
+
+rem --yes skips dnx's download prompt, which would hang a non-interactive caller.
+:run_release
+set /p VERSION=<"%BIN%glimpse-drive.version"
+dotnet dnx "Glimpse.Drive@%VERSION%" --yes -- %*
 exit /b %errorlevel%
 
 rem The sidecar is UTF-8 and `set /p` decodes in the console code page, so the read runs
