@@ -7,7 +7,7 @@ public class WindowSelectorTests
 {
     private static WindowInfo Win(long id, string owner, string? title = null,
         int w = 800, int h = 600, int layer = 0, bool onScreen = true) =>
-        new(id, owner, title, 0, 0, w, h, layer, onScreen);
+        new(id, owner, 1, title, 0, 0, w, h, layer, onScreen);
 
     [Fact]
     public void SelectFrontmost_WithCaseInsensitiveOwnerMatch_ShouldReturnIt()
