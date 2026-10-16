@@ -20,9 +20,9 @@ public class StepScriptTests
     [Fact]
     public void ParseLine_WithUnknownVariable_ShouldThrowNamingIt()
     {
-        var ex = Assert.Throws<InvalidOperationException>(() => StepScript.ParseLine("type App EmailBox $email", NoVariables));
+        var ex = Assert.Throws<InvalidOperationException>(() => StepScript.ParseLine("type Notes TitleBox $title", NoVariables));
 
-        Assert.Contains("$email", ex.Message);
+        Assert.Contains("$title", ex.Message);
     }
 
     [Fact]
@@ -40,9 +40,9 @@ public class StepScriptTests
     [Fact]
     public void ParseLine_WithVariable_ShouldFillItBeforeSplitting()
     {
-        var variables = new Dictionary<string, string> { ["email"] = "a@example.com" };
+        var variables = new Dictionary<string, string> { ["title"] = "Groceries" };
 
-        Assert.Equal(["type", "App", "EmailBox", "a@example.com"], StepScript.ParseLine("  type App EmailBox $email  ", variables)!);
+        Assert.Equal(["type", "Notes", "TitleBox", "Groceries"], StepScript.ParseLine("  type Notes TitleBox $title  ", variables)!);
     }
 
     [Fact]

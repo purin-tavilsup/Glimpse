@@ -20,18 +20,18 @@ public class ElementKeyTests
     [Fact]
     public void Parse_WithAtButNoSlash_ShouldKeepTheWholeKeyAsTarget()
     {
-        var parsed = ElementKey.Parse("@EmailTextBox");
+        var parsed = ElementKey.Parse("@TitleTextBox");
 
         Assert.Null(parsed.Anchor);
-        Assert.Equal("@EmailTextBox", parsed.Target);
+        Assert.Equal("@TitleTextBox", parsed.Target);
     }
 
     [Fact]
     public void Parse_WithAnchor_ShouldSplitAtTheFirstSlash()
     {
-        var parsed = ElementKey.Parse("@EmailTextBox/Parent>CloseButton/x");
+        var parsed = ElementKey.Parse("@TitleTextBox/Parent>CloseButton/x");
 
-        Assert.Equal("EmailTextBox", parsed.Anchor);
+        Assert.Equal("TitleTextBox", parsed.Anchor);
         Assert.Equal("Parent>CloseButton/x", parsed.Target);
     }
 
@@ -44,6 +44,6 @@ public class ElementKeyTests
     [Fact]
     public void Path_WithoutScopes_ShouldBeTheKeyAlone()
     {
-        Assert.Equal(["~Sign in"], ElementKey.Path("~Sign in"));
+        Assert.Equal(["~Save as"], ElementKey.Path("~Save as"));
     }
 }

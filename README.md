@@ -149,10 +149,10 @@ Glimpse lets an agent *look*; `glimpse-drive` lets it *act*, through the OS's ac
 run `glimpse-drive` with no arguments for every command.
 
 ```bash
-glimpse-drive wait MyApp EmailTextBox 30                 # wait for the app, never a fixed sleep
-glimpse-drive type MyApp EmailTextBox me@example.com
-glimpse-drive invoke MyApp SubmitButton
-glimpse-drive expect MyApp ResultPanel                   # exactly one visible window: the one holding ResultPanel
+glimpse-drive wait Notepad "Text editor" 30            # wait for the app, never a fixed sleep
+glimpse-drive invoke Notepad AddButton                 # open a new tab
+glimpse-drive keys Notepad Notepad "Hello"             # bring the window to the front, then type
+glimpse-drive expect Notepad "Text editor"             # exactly one visible window: the one holding the editor
 ```
 
 Each step acts, then asserts the *whole* set of visible windows, so a window that should have stayed hidden fails
