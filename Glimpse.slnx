@@ -13,6 +13,7 @@
     <Project Path="tests/Glimpse.Capture.Tests/Glimpse.Capture.Tests.csproj" />
     <Project Path="tests/Glimpse.Core.Tests/Glimpse.Core.Tests.csproj" />
     <Project Path="tests/Glimpse.Drive.Tests/Glimpse.Drive.Tests.csproj" />
+    <Project Path="tests/Glimpse.Drive.Windows.Tests/Glimpse.Drive.Windows.Tests.csproj" />
     <Project Path="tests/Glimpse.ScratchConsole.Tests/Glimpse.ScratchConsole.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
