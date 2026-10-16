@@ -538,7 +538,7 @@ Expected: mentions the `glimpse` and `diagram-design` skills (namespaced `glimps
 
 - [ ] **Step 4: (Optional, manual) live-window capture of MyApp**
 
-Only if the MyApp app is running and Screen Recording permission is granted for the terminal:
+Only if MyApp is running and Screen Recording permission is granted for the terminal:
 ```bash
 cd ~/dev/MyApp && glimpse --renderer app --window "MyApp" --out /tmp/myapp-shot --no-manifest
 ```
