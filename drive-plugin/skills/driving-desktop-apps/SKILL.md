@@ -18,7 +18,9 @@ they must not use the computer during a run.
 glimpse-drive            # prints every command
 ```
 
-The plugin's wrapper builds the driver from your clone the first time and again whenever its source changes.
+Installed from the marketplace, the plugin runs the CLI version it pins: the first call downloads it through
+`dotnet dnx`, so it takes a few seconds longer. Linked to a clone, it builds the clone instead, and rebuilds
+whenever the source changes.
 
 ## Each step = act, then assert the whole window set
 
@@ -125,7 +127,8 @@ On macOS the press gives up by itself once the app stops answering, with the sam
 
 The driver reads other apps through the accessibility API, which an endpoint-protection product can read as
 cross-process memory access. An unsigned exe doing that from a temp folder also matches a classic malware
-heuristic, which is why the wrapper builds into the clone's `bin/` folder rather than a temp folder.
+heuristic, which is why neither install runs it from a temp folder: a marketplace install runs it from the NuGet
+package cache, a clone from its own `bin/` folder.
 
 If a managed machine's security tool still flags it, do **not** disable or evade it — it's a sanctioned control.
 Report it to whoever runs that tool as a false positive and ask for the driver's path or hash to be allowed.

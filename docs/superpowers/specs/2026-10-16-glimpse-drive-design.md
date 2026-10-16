@@ -92,10 +92,11 @@ The process running the driver needs the Accessibility permission (System Settin
 Accessibility) on macOS, and Screen Recording for `shot`. The driver fails with a message naming the
 Accessibility permission rather than "not found".
 
-## Not in this change
+## Distribution and tests
 
-- **Marketplace install.** The plugin works from a clone only. A marketplace install has no clone to build, so
-  it needs a released package (like `Glimpse.Capture` through `dotnet dnx`); that and the `marketplace.json`
-  entry come together in a release change.
-- **Driver tests.** Drivers talk to real windows; like the capture code's `RealDesktop` tests, they would run
-  locally, not on CI. The shared logic is what the unit tests cover.
+- **Release.** The CLI ships as the `Glimpse.Drive` .NET tool, released with `Glimpse.Capture` under one version.
+  A marketplace install has no clone, so the plugin's wrappers run the version they pin through `dotnet dnx`; a
+  clone install builds and runs the clone. The release workflow runs both wrappers from a copy of the plugin
+  alone, on Windows and macOS, and checks that each OS reached its own driver.
+- **Driver tests.** Drivers talk to real windows, so like the capture code's `RealDesktop` tests, their desktop
+  tests run locally, not on CI. The shared logic is what the unit tests cover on every CI leg.

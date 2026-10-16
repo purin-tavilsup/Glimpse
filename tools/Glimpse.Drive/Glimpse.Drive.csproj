@@ -7,6 +7,27 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
 
+  <!-- The desktop-driving CLI package. Releases publish it to NuGet; a plugin installed from a marketplace runs the
+       version it pins through `dotnet dnx`, and `dotnet tool install` works too. -->
+  <PropertyGroup>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>glimpse-drive</ToolCommandName>
+    <PackageId>Glimpse.Drive</PackageId>
+    <Version>0.2.0</Version>
+    <Authors>Purin Tavilsup</Authors>
+    <Description>Let an agent operate a running desktop app — click, type, close dialogs, use the tray — and assert which windows are visible, on Windows and macOS.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageProjectUrl>https://github.com/purin-tavilsup/Glimpse</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/purin-tavilsup/Glimpse</RepositoryUrl>
+    <PackageTags>ui-automation;accessibility;desktop;testing;agent</PackageTags>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)../../artifacts/nupkg</PackageOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\assets\icon.png" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Interop.UIAutomationClient" />
     <PackageReference Include="PuppeteerSharp" />

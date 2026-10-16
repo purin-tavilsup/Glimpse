@@ -2,6 +2,7 @@
 # glimpse-drive on PATH (via the plugin's bin/). Resolves this script's REAL location
 # through the install symlink — without `readlink -f` (unsupported on macOS) — then runs
 # the in-repo built driver, rebuilding it when the source changed so it's always current.
+# With no clone around it (a marketplace install), it runs the released tool this plugin pins.
 set -euo pipefail
 
 src="${BASH_SOURCE[0]}"
@@ -16,13 +17,23 @@ drive="$repo/tools/Glimpse.Drive"
 project="$drive/Glimpse.Drive.csproj"
 dll="$drive/bin/Debug/net10.0/Glimpse.Drive.dll"
 
-if [ ! -f "$project" ]; then
-    echo "glimpse-drive: no clone found; run scripts/install.sh from a Glimpse clone" >&2
-    exit 127
-fi
 if ! command -v dotnet >/dev/null 2>&1; then
     echo "glimpse-drive: needs the .NET 10 SDK (dotnet on PATH): https://dot.net" >&2
     exit 127
+fi
+
+if [ ! -f "$project" ]; then
+    # --yes skips dnx's download prompt, which would hang a non-interactive caller.
+    version="$(tr -d '[:space:]' < "$bin_dir/glimpse-drive.version")"
+
+    # On macOS, the dnx run that downloads the package prints a NuGet signature notice on stdout, ahead of
+    # the driver's own output, which callers parse. A silent run downloads it first. NuGet lowercases the
+    # cache folder names; `tr` rather than ${var,,} because macOS ships bash 3.2.
+    cached="${NUGET_PACKAGES:-$HOME/.nuget/packages}/glimpse.drive/$(printf '%s' "$version" | tr '[:upper:]' '[:lower:]')"
+    if [ ! -d "$cached" ]; then
+        dotnet dnx "Glimpse.Drive@$version" --yes >/dev/null 2>&1 || true
+    fi
+    exec dotnet dnx "Glimpse.Drive@$version" --yes -- "$@"
 fi
 
 # Rebuild when a source file changed since the last build, so a pull or an edit goes live. A stamp, not the DLL,
