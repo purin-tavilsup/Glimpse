@@ -71,17 +71,17 @@ On macOS the press gives up by itself once the app stops answering, with the sam
 
 ## Browsers
 
-- **Pages the agent opens itself** (the .NET Aspire dashboard, local admin pages): Playwright with
-  `Channel = "msedge"`, so there's no browser download. `aspire` already does the dashboard. Its login URL
+- **Pages the agent opens itself** (the .NET Aspire dashboard, local admin pages): the installed Edge or
+  Chrome, driven headless, so there's no browser download. `aspire` already does the dashboard. Its login URL
   (`/login?t=<token>`) is in the AppHost console and is new every run.
 - **Pages the app opens in the default browser** (OAuth/OIDC sign-in): Chrome hides web content from UI
   Automation, and the page is usually tied to that browser's cookies (`/interaction/<id>`), so it can't be
-  replayed in Playwright. Read the URL with `value chrome "Address and search bar"`. Shoot the page's window
+  replayed in a separate headless browser. Read the URL with `value chrome "Address and search bar"`. Shoot the page's window
   with `shot <file> chrome "<tab title>"`: it brings that window to the front, so no other window covers the
   button you then click. Screen pixel = printed origin + image pixel; if Read downscaled the shot ("multiply by
   2.24"), multiply first. `clickat x y` the button, `keys` into the focused field, and re-shoot after each page
   (email → password → maybe consent). A password manager badge can take focus, so click the field before typing.
-  Lasting fix: make the app open a Playwright-controlled browser in its dev profile.
+  Lasting fix: make the app open a browser the agent controls in its dev profile.
 - The default browser may still be signed in, so the sign-in page can skip itself. Check the address bar
   (`/callback` = already done).
 - **Close every tab the app opened once its step is checked**: `closetab <urlPart[,urlPart]>`. It is the

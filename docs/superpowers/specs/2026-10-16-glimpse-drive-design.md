@@ -16,7 +16,7 @@ tools/Glimpse.Drive/
   ElementKey.cs       shared: the key grammar
   StepScript.cs       shared: `.steps` parsing
   WindowSet.cs        shared: the `expect` / `hold` assertions
-  Aspire.cs           shared: .NET Aspire dashboard start/stop (Playwright)
+  Aspire.cs           shared: .NET Aspire dashboard start/stop (installed Edge or Chrome, over DevTools)
   Windows/            Windows driver: UI Automation (FlaUI) + Win32
   MacOS/              macOS driver: Accessibility API (AXUIElement) + CoreGraphics
 drive-plugin/         the Claude Code plugin: bin/ wrappers + the driving-desktop-apps skill

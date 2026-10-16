@@ -13,7 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Playwright" />
+    <PackageReference Include="PuppeteerSharp" />
     <ProjectReference Include="..\..\src\Glimpse.Core\Glimpse.Core.csproj" />
     <InternalsVisibleTo Include="Glimpse.Drive.Windows.Tests" />
   </ItemGroup>
