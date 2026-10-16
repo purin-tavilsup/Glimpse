@@ -12,9 +12,11 @@
     <Project Path="tests/Glimpse.Avalonia.Tests/Glimpse.Avalonia.Tests.csproj" />
     <Project Path="tests/Glimpse.Capture.Tests/Glimpse.Capture.Tests.csproj" />
     <Project Path="tests/Glimpse.Core.Tests/Glimpse.Core.Tests.csproj" />
+    <Project Path="tests/Glimpse.Drive.Tests/Glimpse.Drive.Tests.csproj" />
     <Project Path="tests/Glimpse.ScratchConsole.Tests/Glimpse.ScratchConsole.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/Glimpse.Capture/Glimpse.Capture.csproj" />
+    <Project Path="tools/Glimpse.Drive/Glimpse.Drive.csproj" />
   </Folder>
 </Solution>
