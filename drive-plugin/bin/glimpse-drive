@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# glimpse-drive on PATH (via the plugin's bin/). Resolves this script's REAL location
+# through the install symlink — without `readlink -f` (unsupported on macOS) — then runs
+# the in-repo built driver, rebuilding it when the source changed so it's always current.
+set -euo pipefail
+
+src="${BASH_SOURCE[0]}"
+while [ -L "$src" ]; do
+    dir="$(cd -P "$(dirname "$src")" && pwd)"
+    src="$(readlink "$src")"
+    [[ $src != /* ]] && src="$dir/$src"
+done
+bin_dir="$(cd -P "$(dirname "$src")" && pwd)"
+repo="$(cd "$bin_dir/../.." && pwd)"   # drive-plugin/bin -> drive-plugin -> repo
+drive="$repo/tools/Glimpse.Drive"
+project="$drive/Glimpse.Drive.csproj"
+dll="$drive/bin/Debug/net10.0/Glimpse.Drive.dll"
+
+if [ ! -f "$project" ]; then
+    echo "glimpse-drive: no clone found; run scripts/install.sh from a Glimpse clone" >&2
+    exit 127
+fi
+if ! command -v dotnet >/dev/null 2>&1; then
+    echo "glimpse-drive: needs the .NET 10 SDK (dotnet on PATH): https://dot.net" >&2
+    exit 127
+fi
+
+# Rebuild when a source file changed since the last build, so a pull or an edit goes live. A stamp, not the DLL,
+# marks the build: a change that leaves a dependency's public API alone can leave the DLL untouched, which would
+# make every later call rebuild. The driver reads the window list from src/Glimpse.Core, so that counts too.
+stamp="$drive/obj/glimpse-drive-wrapper.stamp"
+if [ ! -f "$dll" ] || [ ! -f "$stamp" ] || [ -n "$(
+    find "$drive" "$repo/src" \( -name '*.cs' -o -name '*.csproj' -o -name '*.props' \) \
+        -not -path '*/bin/*' -not -path '*/obj/*' -newer "$stamp" -print -quit
+    find "$repo" -maxdepth 1 -name 'Directory.*.props' -newer "$stamp" -print -quit
+)" ]; then
+    dotnet build "$project" -f net10.0 -v quiet >&2
+    touch "$stamp"
+fi
+exec dotnet "$dll" "$@"
