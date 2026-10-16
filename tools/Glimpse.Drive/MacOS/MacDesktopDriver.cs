@@ -135,10 +135,10 @@ internal sealed class MacDesktopDriver : IDesktopDriver
     // another one; the PASS rule demands a visible window for that reason.
     public int Foreground(string? proc, string? anchor)
     {
-        var app = FrontmostApp() ?? throw new InvalidOperationException("no app with a window on screen is frontmost");
-        var window = app.Element("AXFocusedWindow");
-        var owner = WindowServer.ProcessName(app.Pid);
-        var visible = window is { Minimized: false } && !app.Hidden;
+        var app = FrontmostApp();
+        var window = app?.Element("AXFocusedWindow");
+        var owner = app is null ? "" : WindowServer.ProcessName(app.Pid);
+        var visible = window is { Minimized: false } && app is { Hidden: false };
         var r = window?.Frame ?? Rectangle.Empty;
         var line = $"foreground: {owner} '{window?.Title}' id='{window?.Identifier}' " +
                    $"visible={visible} rect=({r.Left},{r.Top})-({r.Right},{r.Bottom})";
@@ -158,8 +158,10 @@ internal sealed class MacDesktopDriver : IDesktopDriver
     // name of the process that owns the item then identifies it, as an app's name does a Windows tray icon.
     public void Tray(string tooltipPart, bool rightClick)
     {
-        var item = StatusItems().FirstOrDefault(i => new[] { i.Item.Help, i.Item.Title, i.Item.Description, i.Proc }
-                       .Any(text => text?.Contains(tooltipPart, StringComparison.OrdinalIgnoreCase) == true)).Item
+        bool Holds(string? text) => text?.Contains(tooltipPart, StringComparison.OrdinalIgnoreCase) == true;
+        var items = StatusItems().ToList();
+        var item = items.FirstOrDefault(i => Holds(i.Item.Help) || Holds(i.Item.Title) || Holds(i.Item.Description)).Item
+                   ?? items.FirstOrDefault(i => Holds(i.Proc)).Item
                    ?? throw new InvalidOperationException($"no status-bar item named *{tooltipPart}*");
         // An open menu runs the app's menu loop, which leaves the action that opened it unanswered.
         var result = item.Perform(rightClick ? "AXShowMenu" : "AXPress");
@@ -240,7 +242,8 @@ internal sealed class MacDesktopDriver : IDesktopDriver
         : root.Descendants().FirstOrDefault(e => Names(e).Contains(key));
 
     // A window's own buttons carry no identifier or title, only a subrole; without its AX prefix it reads like
-    // the Windows title-bar ids, so `@Anchor/CloseButton` works on both. Lazy, so a match stops reading early.
+    // the Windows title-bar ids, so `@Anchor/CloseButton` works on both. A label's text is its value, but a text
+    // field's value is what was typed into it, which is no name. Lazy, so a match stops reading early.
     private static IEnumerable<string> Names(AxElement e)
     {
         if (e.Identifier is { } id)
@@ -255,9 +258,9 @@ internal sealed class MacDesktopDriver : IDesktopDriver
         {
             yield return description;
         }
-        if (e.Value is { } value)
+        if (e.Role == "AXStaticText" && e.Value is { } text)
         {
-            yield return value;
+            yield return text;
         }
         if (e.Subrole is { } subrole)
         {
@@ -287,7 +290,8 @@ internal sealed class MacDesktopDriver : IDesktopDriver
     }
 
     // The system-wide element's AXFocusedApplication answers CannotComplete to a command-line caller, so the apps
-    // with a window on screen are asked instead; only one of them is frontmost.
+    // with a window on screen are asked instead; only one of them is frontmost, and an app whose last window
+    // closed is none of them.
     private static AxElement? FrontmostApp() => WindowServer.AppWindows()
         .Select(w => w.OwnerPid).Distinct().Select(App).FirstOrDefault(app => app.Frontmost);
 
