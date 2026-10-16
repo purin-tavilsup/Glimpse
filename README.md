@@ -137,10 +137,10 @@ accessibility API — click, type, close dialogs, use the tray — and asserts w
 end-to-end check needs no human clicks. The [`driving-desktop-apps`](drive-plugin/skills/driving-desktop-apps/SKILL.md)
 skill teaches the act-then-assert loop; run `glimpse-drive` with no arguments for every command.
 
-It is one CLI with the same commands everywhere and one driver per OS. Windows (UI Automation) is ready; the
-macOS driver is not built yet. The `glimpse-drive` plugin installs from a clone only for now: `install.ps1`
-links it next to `glimpse`. [The design](docs/superpowers/specs/2026-10-16-glimpse-drive-design.md) describes
-the contract a new OS driver implements.
+It is one CLI with the same commands everywhere and one driver per OS: UI Automation on Windows, the
+Accessibility API on macOS. The `glimpse-drive` plugin installs from a clone only for now: `install.sh` and
+`install.ps1` link it next to `glimpse`. [The design](docs/superpowers/specs/2026-10-16-glimpse-drive-design.md)
+describes the contract each OS driver implements.
 
 ## Project layout
 
