@@ -34,8 +34,8 @@ Suite **143 passed / 0 failed / 2 skipped** on Windows.
 - `ToolLocator` on macOS accepts a file without the exec bit, where `which` did not (review M-5).
 - Untitled windows are now selectable, so without `--title` a visible untitled popup of the same
   app (an open menu, an overlay) in front of the real window would win. None on this box; a later
-  tie-break could prefer the first titled match. ⚠️ **Do not add it naively:** on 2026-10-01 the
-  MyApp's untitled sign-in prompt sat in front of its titled "Setting Up…" window and the
+  tie-break could prefer the first titled match. ⚠️ **Do not add it naively:** on 2026-10-01 an
+  app's untitled prompt sat in front of its own titled main window and the
   untitled one was the right capture; "prefer titled" would have picked the wrong window.
 - An existing Windows install with a **non-ASCII** repo path keeps an old-format sidecar that the
   new wrapper rejects; re-run `scripts/install.ps1` once after updating.

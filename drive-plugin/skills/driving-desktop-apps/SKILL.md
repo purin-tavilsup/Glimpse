@@ -30,7 +30,7 @@ whenever the source changes.
 | Wait for the app (never fixed sleeps) | `glimpse-drive wait <proc> <key> 90` |
 | Act | `invoke` (preferred, no mouse) · `click` · `type` · `keys` · `tray` (`tray <name> right` opens its menu) · `aspire start/stop` |
 | Read one value | `name <proc> <key>` (a WinForms label's text is its Name) · `value <proc> <key>` (a Value pattern, e.g. a browser address bar). Both beat grepping a `tree` |
-| Assert (waits up to 10 s, or `[sec]`) | `expect <proc> <anchorA,anchorB\|none>`, e.g. `expect MyApp EmailTextBox` = exactly one visible window, the one holding that element |
+| Assert (waits up to 10 s, or `[sec]`) | `expect <proc> <anchorA,anchorB\|none>`, e.g. `expect Notepad "Text editor"` = exactly one visible window, the one holding that element |
 | Assert it *stays* so ("doesn't reappear") | `hold <proc> <anchors\|none> 30`. `expect` passes the moment the set matches; `hold` fails if it changes during the window |
 | Front-most | `zorder <procA,procB>`, lower `#` = nearer the front |
 | Who has keyboard focus | `foreground <proc> [anchor]`: PASS only if a **visible** window of `<proc>` (holding anchor) has it. Taking the foreground never makes a window visible, so a hidden window can swallow keystrokes while another one shows |
@@ -42,7 +42,7 @@ cancelled, so the driver lists the app's visible windows through calls that don'
 **2** — a blocked UI thread fails the step instead of hanging your shell. `invoke` has its own 10 s limit
 (see below).
 
-Name every window by an **anchor**, an element only that window has (an email box, a menu button). `expect`
+Name every window by an **anchor**, an element only that window has (an editor, a menu button). `expect`
 fails on any extra visible window. That is the point: a window that should have stayed hidden is the bug you're
 looking for, and skimming a partial dump misses it.
 
@@ -76,16 +76,15 @@ On macOS the press gives up by itself once the app stops answering, with the sam
 - **Pages the agent opens itself** (the .NET Aspire dashboard, local admin pages): the installed Edge or
   Chrome, driven headless, so there's no browser download. `aspire` already does the dashboard. Its login URL
   (`/login?t=<token>`) is in the AppHost console and is new every run.
-- **Pages the app opens in the default browser** (OAuth/OIDC sign-in): Chrome hides web content from UI
-  Automation, and the page is usually tied to that browser's cookies (`/interaction/<id>`), so it can't be
-  replayed in a separate headless browser. Read the URL with `value chrome "Address and search bar"`. Shoot the page's window
+- **Pages the app opens in the default browser**: Chrome hides web content from UI Automation, and such a page
+  is often tied to that browser's session and cookies, so it can't be replayed in a separate headless browser. Read the URL with `value chrome "Address and search bar"`. Shoot the page's window
   with `shot <file> chrome "<tab title>"`: it brings that window to the front, so no other window covers the
   button you then click. Screen pixel = printed origin + image pixel; if Read downscaled the shot ("multiply by
-  2.24"), multiply first. `clickat x y` the button, `keys` into the focused field, and re-shoot after each page
-  (email → password → maybe consent). A password manager badge can take focus, so click the field before typing.
+  2.24"), multiply first. `clickat x y` the button, `keys` into the focused field, and re-shoot after each page,
+  since one click often leads to the next page. An autofill badge can take focus, so click the field before typing.
   Lasting fix: make the app open a browser the agent controls in its dev profile.
-- The default browser may still be signed in, so the sign-in page can skip itself. Check the address bar
-  (`/callback` = already done).
+- The default browser may already hold the session the page needs, so the page can skip ahead or close itself.
+  Check the address bar before acting on what you expect to see.
 - **Close every tab the app opened once its step is checked**: `closetab <urlPart[,urlPart]>`. It is the
   person's own browser, so tabs pile up across runs. It closes only while the *active* tab's address matches,
   so name the app's own hosts and ports (never a bare `localhost:`, which can match the person's tabs).
