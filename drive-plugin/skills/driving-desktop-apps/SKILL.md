@@ -27,7 +27,7 @@ whenever the source changes.
 | Step | Command |
 |---|---|
 | Find names/ids first | `glimpse-drive tree <proc> 3`, `glimpse-drive windows`, `glimpse-drive controls <proc> <titlePart>` |
-| Wait for the app (never fixed sleeps) | `glimpse-drive wait <proc> <key> 90` |
+| Wait for the app (never fixed sleeps) | `glimpse-drive wait <proc> <key> 90`. It fails after 10 s if `<proc>` has no process (as does `expect`), so a launch that never happened shows up at once, not at the timeout |
 | Act | `invoke` (preferred, no mouse) · `click` · `type` · `keys` · `tray` (`tray <name> right` opens its menu) · `aspire start/stop` |
 | Read one value | `name <proc> <key>` (a WinForms label's text is its Name) · `value <proc> <key>` (a Value pattern, e.g. a browser address bar). Both beat grepping a `tree` |
 | Assert (waits up to 10 s, or `[sec]`) | `expect <proc> <anchorA,anchorB\|none>`, e.g. `expect Notepad "Text editor"` = exactly one visible window, the one holding that element |

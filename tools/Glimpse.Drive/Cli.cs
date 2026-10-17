@@ -20,9 +20,10 @@ public static class Cli
           windows                              all top-level windows, front to back
           tree <proc> [depth]                  accessibility tree of the process's windows
           controls <proc> <titlePart>          text boxes, buttons and documents in one window
-          wait <proc> <key> [sec]              wait until key exists (default 60 s)
+          wait <proc> <key> [sec]              wait until key exists (default 60 s); fails after 10 s if <proc> has no process
           expect <proc> <anchor,anchor|none> [sec]
-                                               visible windows must become exactly those holding the anchors
+                                               visible windows must become exactly those holding the anchors;
+                                               fails after 10 s if <proc> has no process (unless "none")
           hold <proc> <anchor,anchor|none> [sec]
                                                ...and must stay that way for the whole duration (default 30 s)
           click <proc> <key>                   real mouse click on the element
@@ -107,8 +108,13 @@ public static class Cli
             case "zorder": driver.ListWindows(args[1].Split(',')); break;
             case "tree": driver.Tree(args[1], args.Length > 2 ? int.Parse(args[2]) : 6); break;
             case "controls": driver.Controls(args[1], args[2]); break;
-            case "wait": driver.Wait(args[1], args[2], Seconds(args, 3, WaitDefaultSeconds)); Console.WriteLine($"found {args[2]}"); break;
-            case "expect": return WindowSet.Expect(a => driver.WindowLabels(args[1], a), args[2], Seconds(args, 3, ExpectDefaultSeconds), Poll);
+            case "wait":
+                AppPresence.For(args[1]).Wait(slice => driver.Wait(args[1], args[2], slice), Seconds(args, 3, WaitDefaultSeconds));
+                Console.WriteLine($"found {args[2]}");
+                break;
+            case "expect":
+                return WindowSet.Expect(a => driver.WindowLabels(args[1], a), args[2], Seconds(args, 3, ExpectDefaultSeconds), Poll,
+                                        AppPresence.For(args[1]));
             case "hold": return WindowSet.Hold(a => driver.WindowLabels(args[1], a), args[2], Seconds(args, 3, HoldDefaultSeconds), Poll);
             case "click": driver.Click(args[1], args[2]); break;
             case "invoke": driver.Invoke(args[1], args[2]); break;

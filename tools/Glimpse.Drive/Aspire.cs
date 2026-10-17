@@ -27,6 +27,15 @@ public static class Aspire
         }
         """;
 
+    // The row's cells as the dashboard shows them, so a timeout can say what state the resource is stuck in.
+    private const string RowScript = """
+        (resource) => {
+            const row = [...document.querySelectorAll('[role=row]')].find(r => r.textContent.includes(resource));
+            if (!row) return '';
+            return [...row.querySelectorAll('[role=gridcell]')].map(c => c.innerText.trim()).filter(t => t).join(' | ');
+        }
+        """;
+
     // Drives the installed Edge or Chrome over the DevTools protocol, so nothing is downloaded.
     public static async Task Run(string action, string resource, string loginUrl)
     {
@@ -43,8 +52,25 @@ public static class Aspire
         await Press(page, resource, $"{(action == "start" ? "Start" : "Stop")} resource");
 
         var state = action == "start" ? "Running" : "Finished|Exited";
-        await page.WaitForFunctionAsync(StateScript, new WaitForFunctionOptions { Timeout = (int)StateTimeout.TotalMilliseconds }, resource, state);
+        try
+        {
+            await page.WaitForFunctionAsync(StateScript, new WaitForFunctionOptions { Timeout = (int)StateTimeout.TotalMilliseconds }, resource, state);
+        }
+        catch (WaitTaskTimeoutException)
+        {
+            throw new InvalidOperationException(TimeoutMessage(resource, state, await page.EvaluateFunctionAsync<string>(RowScript, resource)));
+        }
         Console.WriteLine($"{resource}: {state}");
+    }
+
+    /// <summary>Names the state the resource is stuck in; a waiting one is held by a resource it depends on.</summary>
+    public static string TimeoutMessage(string resource, string state, string row)
+    {
+        var message = $"{resource} did not reach {state} in {StateTimeout.TotalSeconds:0} s; its dashboard row: {(row.Length > 0 ? row : "(not found)")}";
+        return row.Contains("Waiting", StringComparison.OrdinalIgnoreCase)
+            ? message + ". A waiting resource starts only once the resources it waits for are up (WaitFor/WaitForStart): " +
+              "check their state"
+            : message;
     }
 
     private static async Task Press(IPage page, string resource, string label)
