@@ -10,6 +10,25 @@ public class WindowSetTests
     private const string Unexpected = "unexpected window {X=0,Y=0,Width=10,Height=10}";
 
     [Fact]
+    public void Expect_WhenTheAppIsNotRunning_ShouldThrowBeforeTheTimeout()
+    {
+        var gone = new AppPresence("Notepad", _ => false, TimeSpan.Zero);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            WindowSet.Expect(_ => [], "Main", TimeSpan.FromSeconds(3), NoPoll, gone));
+    }
+
+    [Fact]
+    public void Expect_WithNoneWhenTheAppIsNotRunning_ShouldPass()
+    {
+        var gone = new AppPresence("Notepad", _ => false, TimeSpan.Zero);
+
+        var code = WindowSet.Expect(_ => [], WindowSet.None, Instant, NoPoll, gone);
+
+        Assert.Equal(0, code);
+    }
+
+    [Fact]
     public void Expect_WithAnExtraWindow_ShouldFail()
     {
         var code = WindowSet.Expect(_ => ["Main", Unexpected], "Main", Instant, NoPoll);

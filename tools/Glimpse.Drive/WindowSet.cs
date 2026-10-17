@@ -8,14 +8,22 @@ public static class WindowSet
 {
     public const string None = "none";
 
-    /// <summary>Passes as soon as the visible windows are exactly those holding <paramref name="anchors"/>.</summary>
-    public static int Expect(Func<IReadOnlyList<string>, IReadOnlyList<string>> labels, string anchors, TimeSpan timeout, TimeSpan poll)
+    /// <summary>
+    /// Passes as soon as the visible windows are exactly those holding <paramref name="anchors"/>. While it waits for
+    /// windows, <paramref name="presence"/> fails it early if the app has no process.
+    /// </summary>
+    public static int Expect(Func<IReadOnlyList<string>, IReadOnlyList<string>> labels, string anchors, TimeSpan timeout, TimeSpan poll,
+                             AppPresence? presence = null)
     {
         var wanted = Wanted(anchors);
         var deadline = DateTime.UtcNow + timeout;
         string actual;
         while (!Is(labels(wanted), wanted, out actual) && DateTime.UtcNow < deadline)
         {
+            if (wanted.Length > 0)
+            {
+                presence?.ThrowIfGone();
+            }
             Thread.Sleep(poll);
         }
         return Report(anchors, actual, Is(labels(wanted), wanted, out actual));
