@@ -7,6 +7,8 @@ public static class Aspire
 {
     private static readonly TimeSpan PressTimeout = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan StateTimeout = TimeSpan.FromSeconds(60);
+    private const string RunningState = "Running";
+    private const string StoppedState = "Finished|Exited";
 
     // Finds the resource's row and presses its button; the dashboard renders rows after the page loads, so the
     // caller polls this until it answers "pressed".
@@ -51,7 +53,7 @@ public static class Aspire
 
         await Press(page, resource, $"{(action == "start" ? "Start" : "Stop")} resource");
 
-        var state = action == "start" ? "Running" : "Finished|Exited";
+        var state = action == "start" ? RunningState : StoppedState;
         try
         {
             await page.WaitForFunctionAsync(StateScript, new WaitForFunctionOptions { Timeout = (int)StateTimeout.TotalMilliseconds }, resource, state);
@@ -63,14 +65,24 @@ public static class Aspire
         Console.WriteLine($"{resource}: {state}");
     }
 
-    /// <summary>Names the state the resource is stuck in; a waiting one is held by a resource it depends on.</summary>
+    /// <summary>
+    /// Names the state the resource is stuck in. A waiting one is held by a resource it depends on; one still running
+    /// after a stop has usually relaunched itself into a process the dashboard did not start and cannot stop.
+    /// </summary>
     public static string TimeoutMessage(string resource, string state, string row)
     {
         var message = $"{resource} did not reach {state} in {StateTimeout.TotalSeconds:0} s; its dashboard row: {(row.Length > 0 ? row : "(not found)")}";
-        return row.Contains("Waiting", StringComparison.OrdinalIgnoreCase)
-            ? message + ". A waiting resource starts only once the resources it waits for are up (WaitFor/WaitForStart): " +
-              "check their state"
-            : message;
+        if (row.Contains("Waiting", StringComparison.OrdinalIgnoreCase))
+        {
+            return message + ". A waiting resource starts only once the resources it waits for are up (WaitFor/WaitForStart): " +
+                   "check their state";
+        }
+        if (state == StoppedState && row.Contains(RunningState, StringComparison.OrdinalIgnoreCase))
+        {
+            return message + ". If the app restarted itself, the dashboard no longer owns that process: quit it from the " +
+                   "app, for example its tray menu";
+        }
+        return message;
     }
 
     private static async Task Press(IPage page, string resource, string label)

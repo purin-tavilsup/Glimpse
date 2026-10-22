@@ -29,4 +29,20 @@ public class AspireTests
 
         Assert.Contains("(not found)", message);
     }
+
+    [Fact]
+    public void TimeoutMessage_WhenAStopFindsTheResourceStillRunning_ShouldSuggestTheAppRestartedItself()
+    {
+        var message = Aspire.TimeoutMessage("app", "Finished|Exited", "app | Project | Running");
+
+        Assert.Contains("restarted itself", message);
+    }
+
+    [Fact]
+    public void TimeoutMessage_WhenAStartTimesOut_ShouldNotMentionARestart()
+    {
+        var message = Aspire.TimeoutMessage("app", "Running", "app | Project | Running");
+
+        Assert.DoesNotContain("restarted itself", message);
+    }
 }
