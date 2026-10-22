@@ -13,7 +13,7 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>glimpse-drive</ToolCommandName>
     <PackageId>Glimpse.Drive</PackageId>
-    <Version>0.3.0</Version>
+    <Version>0.3.1</Version>
     <Authors>Purin Tavilsup</Authors>
     <Description>Let an agent operate a running desktop app — click, type, close dialogs, use the tray — and assert which windows are visible, on Windows and macOS.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
