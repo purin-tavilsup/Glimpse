@@ -34,7 +34,7 @@ whenever the source changes.
 | Assert it *stays* so ("doesn't reappear") | `hold <proc> <anchors\|none> 30`. `expect` passes the moment the set matches; `hold` fails if it changes during the window |
 | Front-most | `zorder <procA,procB>`, lower `#` = nearer the front |
 | Who has keyboard focus | `foreground <proc> [anchor]`: PASS only if a **visible** window of `<proc>` (holding anchor) has it. Taking the foreground never makes a window visible, so a hidden window can swallow keystrokes while another one shows |
-| Look | `shot <file.png> [<proc> <titlePart>]` (brings that window to the front first; prints its origin), then Read the PNG |
+| Look | `shot <file.png> [<proc> <titlePart>]` (brings that window to the front first; prints its origin; the `.png` may come last too), then Read the PNG |
 | Many steps in one session | `run flow.steps [key=value]...`: one command per line, `#` comments, `$key` filled in; stops at the first failure |
 
 Every command has a **hard watchdog** (its own timeout + 30 s). Past it the stuck accessibility call can't be
@@ -80,8 +80,9 @@ On macOS the press gives up by itself once the app stops answering, with the sam
   is often tied to that browser's session and cookies, so it can't be replayed in a separate headless browser. Read the URL with `value chrome "Address and search bar"`. Shoot the page's window
   with `shot <file> chrome "<tab title>"`: it brings that window to the front, so no other window covers the
   button you then click. Screen pixel = printed origin + image pixel; if Read downscaled the shot ("multiply by
-  2.24"), multiply first. `clickat x y` the button, `keys` into the focused field, and re-shoot after each page,
-  since one click often leads to the next page. An autofill badge can take focus, so click the field before typing.
+  2.24"), multiply first. `clickat x y` the button, and re-shoot after each page, since one click often leads to
+  the next page. **To type into a field, `clickat` it first, then `keys`**: `keys` brings the window to the front
+  but leaves the page's focus wherever it was, and an autofill badge can take it.
   Lasting fix: make the app open a browser the agent controls in its dev profile.
 - The default browser may already hold the session the page needs, so the page can skip ahead or close itself.
   Check the address bar before acting on what you expect to see.
@@ -119,6 +120,8 @@ On macOS the press gives up by itself once the app stops answering, with the sam
 | Step "passed" but the person saw an extra window | you asserted one element, not the window set; use `expect` |
 | `clickat` hit a different window | another window covered the spot; `front` (or `shot` with a window) right before it |
 | The app's own launch didn't take focus | Windows refuses the foreground to a process started from a background shell; that's the OS, not the app. Judge focus only after a real user action (a click on the window) |
+| `keys` typed into a browser page but the field stayed empty | the page's focus was elsewhere; `clickat` the field, then `keys` |
+| `aspire stop` times out with the resource still Running | the app relaunched itself (an update, a restart it asked for), and the dashboard can't stop a process it didn't start; quit it from the app, e.g. `tray <name> right` then `click <proc> "<Quit item>"` |
 | Command exits 2 with "watchdog ... no answer" | the app's UI thread is wedged, usually a modal `invoke` opened; the printed window list shows what's up |
 | Antivirus / EDR flags the driver | expected — see below |
 
