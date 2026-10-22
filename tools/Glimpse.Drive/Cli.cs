@@ -35,7 +35,7 @@ public static class Cli
           closetab <urlPart[,urlPart]>         close the browser's active tab while its address contains one of them
           clickat <x> <y>                      click screen pixel (last resort)
           front <proc> <titlePart>             bring that window to the front (before a clickat: another window may cover it)
-          shot <file.png> [<proc> <titlePart>] screenshot the whole desktop, or that window brought to the front;
+          shot <file.png> [<proc> <titlePart>] screenshot the whole desktop, or that window brought to the front (file first or last);
                                                prints the origin: screen pixel = origin + image pixel
           foreground [<proc> [anchor]]         print the window holding keyboard focus; with <proc>, PASS only if
                                                that process's VISIBLE window (holding anchor) has it
@@ -125,7 +125,10 @@ public static class Cli
             case "closetab": Console.WriteLine($"closed {driver.CloseTabs(args[1])} tab(s)"); break;
             case "clickat": driver.ClickAt(int.Parse(args[1]), int.Parse(args[2])); break;
             case "front": driver.Front(args[1], args[2]); break;
-            case "shot": driver.Shot(args[1], args.Length > 3 ? args[2] : null, args.Length > 3 ? args[3] : null); break;
+            case "shot":
+                var shot = ShotArguments.Parse(args[1..]);
+                driver.Shot(shot.File, shot.Proc, shot.TitlePart);
+                break;
             case "foreground": return driver.Foreground(args.Length > 1 ? args[1] : null, args.Length > 2 ? args[2] : null);
             case "tray": driver.Tray(args[1], args.Length > 2 && args[2] == "right"); break;
             default: Console.Error.WriteLine($"unknown command {args[0]}"); return 1;
