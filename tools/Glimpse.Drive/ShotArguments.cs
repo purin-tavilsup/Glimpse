@@ -2,17 +2,21 @@ namespace Glimpse.Drive;
 
 /// <summary>
 /// What <c>shot</c> was asked for: the file, and optionally the window to bring to the front first. The file is the
-/// <c>.png</c> argument wherever it stands, so <c>shot app Title out.png</c> works as well as the documented
-/// <c>shot out.png app Title</c>; with no <c>.png</c> argument the first one is the file.
+/// first argument, as documented, or the last when only the last ends in <c>.png</c>, so <c>shot app Title out.png</c>
+/// works too. Only those two positions are looked at, because a window title can itself end in <c>.png</c>.
 /// </summary>
 public sealed record ShotArguments(string File, string? Proc, string? TitlePart)
 {
     public static ShotArguments Parse(IReadOnlyList<string> args)
     {
-        var fileIndex = Math.Max(0, args.ToList().FindIndex(a => a.EndsWith(".png", StringComparison.OrdinalIgnoreCase)));
-        var window = args.Where((_, i) => i != fileIndex).ToList();
-        return window.Count >= 2
-            ? new ShotArguments(args[fileIndex], window[0], window[1])
-            : new ShotArguments(args[fileIndex], null, null);
+        if (args.Count < 3)
+        {
+            return new ShotArguments(args[0], null, null);
+        }
+        return IsPng(args[^1]) && !IsPng(args[0])
+            ? new ShotArguments(args[^1], args[0], args[1])
+            : new ShotArguments(args[0], args[1], args[2]);
     }
+
+    private static bool IsPng(string arg) => arg.EndsWith(".png", StringComparison.OrdinalIgnoreCase);
 }

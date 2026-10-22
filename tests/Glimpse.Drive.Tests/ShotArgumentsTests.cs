@@ -30,6 +30,23 @@ public class ShotArgumentsTests
     }
 
     [Fact]
+    public void Parse_WithTheFileLastAndATitleEndingInPng_ShouldTakeTheLastAsTheFile()
+    {
+        // An image viewer's title often names a .png; only the first and last positions can hold the file.
+        var shot = ShotArguments.Parse(["viewer", "image.png", "out.png"]);
+
+        Assert.Equal(new ShotArguments("out.png", "viewer", "image.png"), shot);
+    }
+
+    [Fact]
+    public void Parse_WithTheFileFirstAndATitleEndingInPng_ShouldTakeTheFirstAsTheFile()
+    {
+        var shot = ShotArguments.Parse(["out.png", "viewer", "image.png"]);
+
+        Assert.Equal(new ShotArguments("out.png", "viewer", "image.png"), shot);
+    }
+
+    [Fact]
     public void Parse_WithAnUppercaseExtension_ShouldStillFindTheFile()
     {
         var shot = ShotArguments.Parse(["notepad", "Untitled", "OUT.PNG"]);
