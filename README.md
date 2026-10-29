@@ -162,6 +162,11 @@ It is one CLI with the same commands everywhere and one driver per OS: UI Automa
 Accessibility API on macOS. [The design](docs/superpowers/specs/2026-10-16-glimpse-drive-design.md) describes
 the contract each OS driver implements.
 
+A Hyper-V VM's console has no accessibility tree, so the plugin also carries the
+[`driving-hyperv-consoles`](drive-plugin/skills/driving-hyperv-consoles/SKILL.md) skill: a PowerShell script that
+reads the screen and types into it through Hyper-V's WMI provider (an OS installer, a login prompt, a VM whose
+network is down), with no focus or mouse needed.
+
 ## Project layout
 
 ```
@@ -175,7 +180,7 @@ tools/
   Glimpse.Capture/               the CLI, packed as the Glimpse.Capture .NET tool
   Glimpse.Drive/                 glimpse-drive: shared commands + one desktop driver per OS
 plugin/                          the glimpse Claude Code plugin: bin/ wrappers + the two skills
-drive-plugin/                    the glimpse-drive plugin: bin/ wrapper + the driving-desktop-apps skill
+drive-plugin/                    the glimpse-drive plugin: bin/ wrapper + the driving-desktop-apps and driving-hyperv-consoles skills
 .claude-plugin/                  marketplace manifest, so the repo is installable
 samples/
   Glimpse.ScratchConsole/        scratch app for trying the Avalonia renderer
