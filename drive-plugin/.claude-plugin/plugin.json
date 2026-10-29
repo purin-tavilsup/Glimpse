@@ -1,6 +1,6 @@
 {
   "name": "glimpse-drive",
-  "description": "Let an agent operate a running desktop app itself — click, type, close dialogs, use the tray, and assert which windows are visible — with the glimpse-drive CLI and the driving-desktop-apps skill.",
+  "description": "Let an agent operate a running desktop app itself — click, type, close dialogs, use the tray, and assert which windows are visible — with the glimpse-drive CLI and the driving-desktop-apps skill; and see and type into a Hyper-V VM's console with the driving-hyperv-consoles skill.",
   "version": "0.3.1",
   "author": { "name": "Purin Tavilsup" }
 }
