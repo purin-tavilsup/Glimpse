@@ -46,9 +46,11 @@ $shifted = @{ '!' = 49; '@' = 50; '#' = 51; '$' = 52; '%' = 53; '^' = 54; '&' = 
     '~' = 192 }
 
 function Get-Vm {
-    $vm = Get-CimInstance -Namespace $ns -ClassName Msvm_ComputerSystem -Filter "ElementName='$($VMName -replace "'", "''")'"
-    if (-not $vm) { throw "No VM named '$VMName' (run as a Hyper-V administrator)." }
-    $vm
+    # Matched here, not in a WQL filter, so a name with a quote or backslash needs no escaping.
+    $vm = @(Get-CimInstance -Namespace $ns -ClassName Msvm_ComputerSystem | Where-Object ElementName -eq $VMName)
+    if ($vm.Count -eq 0) { throw "No VM named '$VMName' (run as a Hyper-V administrator)." }
+    if ($vm.Count -gt 1) { throw "$($vm.Count) VMs are named '$VMName'; rename one first." }
+    $vm[0]
 }
 
 function Get-Keyboard { Get-CimAssociatedInstance -InputObject (Get-Vm) -ResultClassName Msvm_Keyboard -Namespace $ns }
@@ -78,9 +80,10 @@ function Send-Text([string] $text) {
     $keys = foreach ($c in $text.ToCharArray()) { Resolve-Char $c }   # all checked before the first key goes in
     $keyboard = Get-Keyboard
     foreach ($k in $keys) {
-        if ($k.Shift) { Invoke-Key $keyboard PressKey 16 }
-        Invoke-Key $keyboard TypeKey $k.Code
-        if ($k.Shift) { Invoke-Key $keyboard ReleaseKey 16 }
+        if (-not $k.Shift) { Invoke-Key $keyboard TypeKey $k.Code; continue }
+        Invoke-Key $keyboard PressKey 16
+        # A failed TypeKey must not leave Shift down in the guest: it would corrupt every later key.
+        try { Invoke-Key $keyboard TypeKey $k.Code } finally { Invoke-Key $keyboard ReleaseKey 16 }
     }
 }
 
